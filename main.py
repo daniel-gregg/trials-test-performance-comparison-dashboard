@@ -17,18 +17,12 @@ templates = Jinja2Templates(directory="templates")
 # Data file paths
 DATA_DIR = Path("data")
 COMMODITY_PRICES_FILE = DATA_DIR / "commodity_prices.csv"
-YIELDS_COSTS_FILE = DATA_DIR / "yields_costs.csv"
 DATA_FILE = DATA_DIR / "data.csv"
 
 # Load data
 def load_commodity_prices():
     """Load commodity prices data from CSV"""
     df = pd.read_csv(COMMODITY_PRICES_FILE)
-    return df
-
-def load_yields_costs():
-    """Load yields and costs data from CSV"""
-    df = pd.read_csv(YIELDS_COSTS_FILE)
     return df
 
 def load_data():
@@ -123,7 +117,7 @@ def filter_data_by_plot_id(df, plot_ids):
 
     # Filter DataFrame to only include rows with the specified plot IDs
     filtered_df = df[df['plot'].isin(plot_ids)]
-    
+
     # Check if we found any data
     if filtered_df.empty:
         raise ValueError("No data found for the specified plot_ids")
@@ -214,10 +208,10 @@ async def get_plot_data(request: Request, site: str, system: str, phase: str, va
 async def get_plot_data_json(sites: str, system: str = None, phase: str = None, variable: str = None):
     """API endpoint to get plot data as JSON for plotting"""
     df = load_data()
-    
+
     # Parse multiple sites separated by comma
     site_list = [s.strip() for s in sites.split(',')]
-    
+
     plot_data = []
     for site in site_list:
         try:
@@ -233,7 +227,7 @@ async def get_plot_data_json(sites: str, system: str = None, phase: str = None, 
         except Exception as e:
             # Skip sites that cause errors (e.g., no matching data)
             continue
-    
+
     return {"data": plot_data}
 
 @app.get("/api/commodity-prices")
@@ -245,34 +239,12 @@ async def get_commodity_prices():
         "columns": df.columns.tolist()
     }
 
-@app.get("/api/yields-costs")
-async def get_yields_costs():
-    """API endpoint to get yields and costs data"""
-    df = load_yields_costs()
-    return {
-        "data": df.to_dict('records'),
-        "columns": df.columns.tolist()
-    }
-
 @app.get("/tables/commodity-prices")
 async def commodity_prices_table(request: Request):
     """HTMX endpoint to render commodity prices table"""
     df = load_commodity_prices()
     return templates.TemplateResponse(
         "commodity_prices_table.html",
-        {
-            "request": request,
-            "data": df.to_dict('records'),
-            "columns": df.columns.tolist()
-        }
-    )
-
-@app.get("/tables/yields-costs")
-async def yields_costs_table(request: Request):
-    """HTMX endpoint to render yields and costs table"""
-    df = load_yields_costs()
-    return templates.TemplateResponse(
-        "yields_costs_table.html",
         {
             "request": request,
             "data": df.to_dict('records'),
