@@ -18,6 +18,7 @@ templates = Jinja2Templates(directory="templates")
 DATA_DIR = Path("data")
 COMMODITY_PRICES_FILE = DATA_DIR / "commodity_prices.csv"
 YIELDS_COSTS_FILE = DATA_DIR / "yields_costs.csv"
+DATA_FILE = DATA_DIR / "data.csv"
 
 # Load data
 def load_commodity_prices():
@@ -30,10 +31,147 @@ def load_yields_costs():
     df = pd.read_csv(YIELDS_COSTS_FILE)
     return df
 
-@app.get("/", response_class=HTMLResponse)
-async def dashboard(request: Request):
-    """Main dashboard page"""
-    return templates.TemplateResponse("dashboard.html", {"request": request})
+def load_data():
+    """Load main data from CSV"""
+    df = pd.read_csv(DATA_FILE)
+    return df
+
+def get_unique_sites(df):
+    """ Get a list of unique field sites from the plotID column """
+    return list(set([i.split('_')[0] for i in df['plotID']] ))
+
+def get_unique_systems(df, site=None):
+    """ Get a list of unique systems from the plotID column
+        If site is provided, filter by that site
+    """
+    if site is None:
+        return list(set([i.split('_')[1] for i in df['plotID']] ))
+    else:
+        return list(set([i.split('_')[1] for i in df['plotID'] if i.split('_')[0] == site]))
+
+def get_unique_phases(df, site=None, system=None):
+    """ Get a list of unique phases from the plotID column
+        If site is provided, filter by that site
+        If system is provided, filter by that system
+    """
+    if site is None and system is None:
+        return list(set([i.split('_')[2] for i in df['plotID']] ))
+    elif site is not None and system is None:
+        return list(set([i.split('_')[2] for i in df['plotID'] if i.split('_')[0] == site]))
+    elif site is not None and system is not None:
+        return list(set([i.split('_')[2] for i in df['plotID'] if i.split('_')[0] == site and i.split('_')[1] == system]))
+    else:
+        raise ValueError("If system is provided, site must also be provided")
+
+def get_plot_id_values(df, site=None, system=None, phase=None):
+    """ Splits the ID fields and returns
+        a list of plotIDs that match the constaining terms (if any)
+        particular search terms
+        For example, HART_XXX_AAA_BBB and HART_YYY_AAA_CCC will be included as values for the key 'HART' (one of the field sites)
+    """
+
+    """ Example plot ID
+        STREATHAM_S11_P0000_R7
+        Splits into:
+        ['STREATHAM', 'S11', 'P0000', 'R7']
+        'STREATHAM' is the overall field site
+        'S11' is the system - the overall treatment applied to the plot
+        'P0000' references the phase-order of crops. This allows for a system treatment to have different orderings of crops
+        'R7' refers to a replication of the treatment/phase-order combination
+    """
+
+    """
+        We are interested only NOT in replications
+        And MOSTLY in system comparisons.
+        In the future it is EXPECTED that a system-mapping across sites will be provided to allow cross-site comparisons for systems
+    """
+
+    ids = [*set(df['plotID'])]
+
+    if site is None and system is None and phase is None:
+        return ids
+
+    # Check that site is provided if system of phase is provided
+    if (system is not None or phase is not None) and site is None:
+        raise ValueError("If system or phase is provided, site must also be provided")
+
+    # Check that if phase is provided, system must also be provided
+    if phase is not None and system is None:
+        raise ValueError("If phase is provided, system must also be provided")
+
+    # else check constraints and sort by that.
+    if site is not None:
+        ids = [i for i in ids if i.split('_')[0] == site]
+
+    if system is not None:
+        ids = [i for i in ids if i.split('_')[1] == system]
+
+    if phase is not None:
+        ids = [i for i in ids if i.split('_')[2] == phase]
+
+    return ids
+
+# utility function for the get_plotting_data function
+def filter_data_by_plot_id(df, plot_ids):
+    """Filter the DataFrame by a list of plot IDs"""
+
+    # check that all ids are in the df
+    if not df['plotID'].isin(plot_ids).all():
+        raise ValueError("Some plot_ids are not in the DataFrame")
+
+    return df[df['plotID'].isin(plot_ids)]
+
+# used to pre-fill the variable selection dropdown
+def get_variable_list(df):
+    """Get a list of variables (columns) in the DataFrame excluding 'plotID'"""
+    return [col for col in df.columns if col != 'plotID']
+
+# the final function to return plotting data to the user
+def get_plotting_data(df, plot_ids, variable):
+    """Get data for plotting based on plot IDs and variable"""
+    filtered_df = filter_data_by_plot_id(df, plot_ids)
+    if variable not in filtered_df.columns:
+        raise ValueError(f"Variable {variable} not found in DataFrame columns")
+    return filtered_df[['plotID', variable]]
+
+# API endpoints to get unique sites, systems, and phases for dropdown menus
+@app.get("/api/sites", response_class=HTMLResponse)
+async def get_sites(request: Request):
+    """API endpoint to get unique sites"""
+    df = load_data()
+    sites = get_unique_sites(df)
+    return templates.TemplateResponse("sites.html", {"request": request, "sites": sites})
+
+@app.get("/api/systems", response_class=HTMLResponse)
+async def get_systems(request: Request, site: str):
+    """API endpoint to get unique systems for a given site"""
+    df = load_data()
+    systems = get_unique_systems(df, site)
+    return templates.TemplateResponse("systems.html", {"request": request, "systems": systems})
+
+@app.get("/api/phases", response_class=HTMLResponse)
+async def get_phases(request: Request, site: str, system: str):
+    """API endpoint to get unique phases for a given site and system"""
+    df = load_data()
+    phases = get_unique_phases(df, site, system)
+    return templates.TemplateResponse("phases.html", {"request": request, "phases": phases})
+
+# API endpoint to get unique variables
+@app.get("/api/variables", response_class=HTMLResponse)
+async def get_variables(request: Request):
+    """API endpoint to get unique variables for a given site, system, and phase"""
+    df = load_data()
+    variables = get_variable_list(df)
+    return templates.TemplateResponse("variables.html", {"request": request, "variables": variables})
+
+# API endpoint to get plot data
+@app.get("/api/plot-data", response_class=HTMLResponse)
+async def get_plot_data(request: Request, site: str, system: str, phase: str, variable: str):
+    """API endpoint to get plot data for a given site, system, phase, and variable"""
+    df = load_data()
+    plot_ids = get_plot_id_values(df, site, system, phase)
+    data = get_plotting_data(df, plot_ids, variable)
+    return templates.TemplateResponse("plot_data.html", {"request": request, "data": data})
 
 @app.get("/api/commodity-prices")
 async def get_commodity_prices():
@@ -58,7 +196,7 @@ async def commodity_prices_table(request: Request):
     """HTMX endpoint to render commodity prices table"""
     df = load_commodity_prices()
     return templates.TemplateResponse(
-        "commodity_prices_table.html", 
+        "commodity_prices_table.html",
         {
             "request": request,
             "data": df.to_dict('records'),
@@ -71,7 +209,7 @@ async def yields_costs_table(request: Request):
     """HTMX endpoint to render yields and costs table"""
     df = load_yields_costs()
     return templates.TemplateResponse(
-        "yields_costs_table.html", 
+        "yields_costs_table.html",
         {
             "request": request,
             "data": df.to_dict('records'),
