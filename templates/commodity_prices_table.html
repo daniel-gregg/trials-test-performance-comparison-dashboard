@@ -1,0 +1,31 @@
+<div style="overflow-x: auto;">
+    <table class="table">
+        <thead>
+            <tr>
+                {% for column in columns %}
+                <th>{{ column }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+            <tr>
+                {% for column in columns %}
+                <td>
+                    {% if column == 'Date' %}
+                        {{ row[column] }}
+                    {% else %}
+                        ${{ "%.2f"|format(row[column]) }}
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<div class="mt-3">
+    <small class="text-muted">
+        Total records: {{ data|length }} | Data source: commodity_prices.csv
+    </small>
+</div>
