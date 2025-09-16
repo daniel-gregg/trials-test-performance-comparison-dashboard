@@ -16,26 +16,14 @@ templates = Jinja2Templates(directory="templates")
 
 # Data file paths
 DATA_DIR = Path("data")
-COMMODITY_PRICES_FILE = DATA_DIR / "commodity_prices.csv"
 DATA_FILE = DATA_DIR / "data.csv"
-
-# Load data
-def load_commodity_prices():
-    """Load commodity prices data from CSV"""
-    df = pd.read_csv(COMMODITY_PRICES_FILE)
-    return df
 
 def load_data():
     """Load main data from CSV"""
     df = pd.read_csv(DATA_FILE)
     return df
 
-# Main dashboard route
-@app.get("/", response_class=HTMLResponse)
-async def dashboard(request: Request):
-    """Serve the main dashboard"""
-    return templates.TemplateResponse("dashboard.html", {"request": request})
-
+## utility functions
 def get_unique_sites(df):
     """ Get a list of unique field sites from the plot column """
     return list(set([i.split('_')[0] for i in df['plot']] ))
@@ -137,6 +125,14 @@ def get_plotting_data(df, plot_ids, variable):
         raise ValueError(f"Variable {variable} not found in DataFrame columns")
     return filtered_df[['plot', variable]]
 
+##### API Endpoints #####
+
+# Main dashboard route
+@app.get("/", response_class=HTMLResponse)
+async def dashboard(request: Request):
+    """Serve the main dashboard"""
+    return templates.TemplateResponse("dashboard.html", {"request": request})
+
 # API endpoints to get unique sites, systems, and phases for dropdown menus
 @app.get("/api/sites", response_class=HTMLResponse)
 async def get_sites(request: Request):
@@ -229,28 +225,6 @@ async def get_plot_data_json(sites: str, system: str = None, phase: str = None, 
             continue
 
     return {"data": plot_data}
-
-@app.get("/api/commodity-prices")
-async def get_commodity_prices():
-    """API endpoint to get commodity prices data"""
-    df = load_commodity_prices()
-    return {
-        "data": df.to_dict('records'),
-        "columns": df.columns.tolist()
-    }
-
-@app.get("/tables/commodity-prices")
-async def commodity_prices_table(request: Request):
-    """HTMX endpoint to render commodity prices table"""
-    df = load_commodity_prices()
-    return templates.TemplateResponse(
-        "commodity_prices_table.html",
-        {
-            "request": request,
-            "data": df.to_dict('records'),
-            "columns": df.columns.tolist()
-        }
-    )
 
 if __name__ == "__main__":
     import uvicorn
