@@ -37,29 +37,29 @@ def load_data():
     return df
 
 def get_unique_sites(df):
-    """ Get a list of unique field sites from the plotID column """
-    return list(set([i.split('_')[0] for i in df['plotID']] ))
+    """ Get a list of unique field sites from the plot column """
+    return list(set([i.split('_')[0] for i in df['plot']] ))
 
 def get_unique_systems(df, site=None):
-    """ Get a list of unique systems from the plotID column
+    """ Get a list of unique systems from the plot column
         If site is provided, filter by that site
     """
     if site is None:
-        return list(set([i.split('_')[1] for i in df['plotID']] ))
+        return list(set([i.split('_')[1] for i in df['plot']] ))
     else:
-        return list(set([i.split('_')[1] for i in df['plotID'] if i.split('_')[0] == site]))
+        return list(set([i.split('_')[1] for i in df['plot'] if i.split('_')[0] == site]))
 
 def get_unique_phases(df, site=None, system=None):
-    """ Get a list of unique phases from the plotID column
+    """ Get a list of unique phases from the plot column
         If site is provided, filter by that site
         If system is provided, filter by that system
     """
     if site is None and system is None:
-        return list(set([i.split('_')[2] for i in df['plotID']] ))
+        return list(set([i.split('_')[2] for i in df['plot']] ))
     elif site is not None and system is None:
-        return list(set([i.split('_')[2] for i in df['plotID'] if i.split('_')[0] == site]))
+        return list(set([i.split('_')[2] for i in df['plot'] if i.split('_')[0] == site]))
     elif site is not None and system is not None:
-        return list(set([i.split('_')[2] for i in df['plotID'] if i.split('_')[0] == site and i.split('_')[1] == system]))
+        return list(set([i.split('_')[2] for i in df['plot'] if i.split('_')[0] == site and i.split('_')[1] == system]))
     else:
         raise ValueError("If system is provided, site must also be provided")
 
@@ -86,7 +86,7 @@ def get_plot_id_values(df, site=None, system=None, phase=None):
         In the future it is EXPECTED that a system-mapping across sites will be provided to allow cross-site comparisons for systems
     """
 
-    ids = [*set(df['plotID'])]
+    ids = [*set(df['plot'])]
 
     if site is None and system is None and phase is None:
         return ids
@@ -116,15 +116,15 @@ def filter_data_by_plot_id(df, plot_ids):
     """Filter the DataFrame by a list of plot IDs"""
 
     # check that all ids are in the df
-    if not df['plotID'].isin(plot_ids).all():
+    if not df['plot'].isin(plot_ids).all():
         raise ValueError("Some plot_ids are not in the DataFrame")
 
-    return df[df['plotID'].isin(plot_ids)]
+    return df[df['plot'].isin(plot_ids)]
 
 # used to pre-fill the variable selection dropdown
 def get_variable_list(df):
-    """Get a list of variables (columns) in the DataFrame excluding 'plotID'"""
-    return [col for col in df.columns if col != 'plotID']
+    """Get a list of variables (columns) in the DataFrame excluding 'plot'"""
+    return [col for col in df.columns if col != 'plot']
 
 # the final function to return plotting data to the user
 def get_plotting_data(df, plot_ids, variable):
@@ -132,7 +132,7 @@ def get_plotting_data(df, plot_ids, variable):
     filtered_df = filter_data_by_plot_id(df, plot_ids)
     if variable not in filtered_df.columns:
         raise ValueError(f"Variable {variable} not found in DataFrame columns")
-    return filtered_df[['plotID', variable]]
+    return filtered_df[['plot', variable]]
 
 # API endpoints to get unique sites, systems, and phases for dropdown menus
 @app.get("/api/sites", response_class=HTMLResponse)

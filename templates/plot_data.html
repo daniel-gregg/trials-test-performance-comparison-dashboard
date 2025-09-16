@@ -1,0 +1,5 @@
+<div id="plot-data">
+  {% for index, row in data.iterrows() %}
+  <div data-plot="{{ row['plot'] }}" data-value="{{ row[data.columns[1]] }}"></div>
+  {% endfor %}
+</div>
