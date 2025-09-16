@@ -36,30 +36,36 @@ def load_data():
     df = pd.read_csv(DATA_FILE)
     return df
 
+# Main dashboard route
+@app.get("/", response_class=HTMLResponse)
+async def dashboard(request: Request):
+    """Serve the main dashboard"""
+    return templates.TemplateResponse("dashboard.html", {"request": request})
+
 def get_unique_sites(df):
-    """ Get a list of unique field sites from the plotID column """
-    return list(set([i.split('_')[0] for i in df['plotID']] ))
+    """ Get a list of unique field sites from the plot column """
+    return list(set([i.split('_')[0] for i in df['plot']] ))
 
 def get_unique_systems(df, site=None):
-    """ Get a list of unique systems from the plotID column
+    """ Get a list of unique systems from the plot column
         If site is provided, filter by that site
     """
     if site is None:
-        return list(set([i.split('_')[1] for i in df['plotID']] ))
+        return list(set([i.split('_')[1] for i in df['plot']] ))
     else:
-        return list(set([i.split('_')[1] for i in df['plotID'] if i.split('_')[0] == site]))
+        return list(set([i.split('_')[1] for i in df['plot'] if i.split('_')[0] == site]))
 
 def get_unique_phases(df, site=None, system=None):
-    """ Get a list of unique phases from the plotID column
+    """ Get a list of unique phases from the plot column
         If site is provided, filter by that site
         If system is provided, filter by that system
     """
     if site is None and system is None:
-        return list(set([i.split('_')[2] for i in df['plotID']] ))
+        return list(set([i.split('_')[2] for i in df['plot']] ))
     elif site is not None and system is None:
-        return list(set([i.split('_')[2] for i in df['plotID'] if i.split('_')[0] == site]))
+        return list(set([i.split('_')[2] for i in df['plot'] if i.split('_')[0] == site]))
     elif site is not None and system is not None:
-        return list(set([i.split('_')[2] for i in df['plotID'] if i.split('_')[0] == site and i.split('_')[1] == system]))
+        return list(set([i.split('_')[2] for i in df['plot'] if i.split('_')[0] == site and i.split('_')[1] == system]))
     else:
         raise ValueError("If system is provided, site must also be provided")
 
@@ -86,7 +92,7 @@ def get_plot_id_values(df, site=None, system=None, phase=None):
         In the future it is EXPECTED that a system-mapping across sites will be provided to allow cross-site comparisons for systems
     """
 
-    ids = [*set(df['plotID'])]
+    ids = [*set(df['plot'])]
 
     if site is None and system is None and phase is None:
         return ids
@@ -115,16 +121,19 @@ def get_plot_id_values(df, site=None, system=None, phase=None):
 def filter_data_by_plot_id(df, plot_ids):
     """Filter the DataFrame by a list of plot IDs"""
 
-    # check that all ids are in the df
-    if not df['plotID'].isin(plot_ids).all():
-        raise ValueError("Some plot_ids are not in the DataFrame")
+    # Filter DataFrame to only include rows with the specified plot IDs
+    filtered_df = df[df['plot'].isin(plot_ids)]
+    
+    # Check if we found any data
+    if filtered_df.empty:
+        raise ValueError("No data found for the specified plot_ids")
 
-    return df[df['plotID'].isin(plot_ids)]
+    return filtered_df
 
 # used to pre-fill the variable selection dropdown
 def get_variable_list(df):
-    """Get a list of variables (columns) in the DataFrame excluding 'plotID'"""
-    return [col for col in df.columns if col != 'plotID']
+    """Get a list of variables (columns) in the DataFrame excluding 'plot'"""
+    return [col for col in df.columns if col != 'plot']
 
 # the final function to return plotting data to the user
 def get_plotting_data(df, plot_ids, variable):
@@ -132,7 +141,7 @@ def get_plotting_data(df, plot_ids, variable):
     filtered_df = filter_data_by_plot_id(df, plot_ids)
     if variable not in filtered_df.columns:
         raise ValueError(f"Variable {variable} not found in DataFrame columns")
-    return filtered_df[['plotID', variable]]
+    return filtered_df[['plot', variable]]
 
 # API endpoints to get unique sites, systems, and phases for dropdown menus
 @app.get("/api/sites", response_class=HTMLResponse)
@@ -142,6 +151,13 @@ async def get_sites(request: Request):
     sites = get_unique_sites(df)
     return templates.TemplateResponse("sites.html", {"request": request, "sites": sites})
 
+@app.get("/api/sites-json")
+async def get_sites_json():
+    """API endpoint to get unique sites as JSON"""
+    df = load_data()
+    sites = get_unique_sites(df)
+    return {"sites": sites}
+
 @app.get("/api/systems", response_class=HTMLResponse)
 async def get_systems(request: Request, site: str):
     """API endpoint to get unique systems for a given site"""
@@ -149,12 +165,26 @@ async def get_systems(request: Request, site: str):
     systems = get_unique_systems(df, site)
     return templates.TemplateResponse("systems.html", {"request": request, "systems": systems})
 
+@app.get("/api/systems-json")
+async def get_systems_json(site: str):
+    """API endpoint to get unique systems for a given site as JSON"""
+    df = load_data()
+    systems = get_unique_systems(df, site)
+    return {"systems": systems}
+
 @app.get("/api/phases", response_class=HTMLResponse)
 async def get_phases(request: Request, site: str, system: str):
     """API endpoint to get unique phases for a given site and system"""
     df = load_data()
     phases = get_unique_phases(df, site, system)
     return templates.TemplateResponse("phases.html", {"request": request, "phases": phases})
+
+@app.get("/api/phases-json")
+async def get_phases_json(site: str, system: str):
+    """API endpoint to get unique phases for a given site and system as JSON"""
+    df = load_data()
+    phases = get_unique_phases(df, site, system)
+    return {"phases": phases}
 
 # API endpoint to get unique variables
 @app.get("/api/variables", response_class=HTMLResponse)
@@ -164,6 +194,13 @@ async def get_variables(request: Request):
     variables = get_variable_list(df)
     return templates.TemplateResponse("variables.html", {"request": request, "variables": variables})
 
+@app.get("/api/variables-json")
+async def get_variables_json():
+    """API endpoint to get unique variables as JSON"""
+    df = load_data()
+    variables = get_variable_list(df)
+    return {"variables": variables}
+
 # API endpoint to get plot data
 @app.get("/api/plot-data", response_class=HTMLResponse)
 async def get_plot_data(request: Request, site: str, system: str, phase: str, variable: str):
@@ -172,6 +209,32 @@ async def get_plot_data(request: Request, site: str, system: str, phase: str, va
     plot_ids = get_plot_id_values(df, site, system, phase)
     data = get_plotting_data(df, plot_ids, variable)
     return templates.TemplateResponse("plot_data.html", {"request": request, "data": data})
+
+@app.get("/api/plot-data-json")
+async def get_plot_data_json(sites: str, system: str = None, phase: str = None, variable: str = None):
+    """API endpoint to get plot data as JSON for plotting"""
+    df = load_data()
+    
+    # Parse multiple sites separated by comma
+    site_list = [s.strip() for s in sites.split(',')]
+    
+    plot_data = []
+    for site in site_list:
+        try:
+            plot_ids = get_plot_id_values(df, site, system, phase)
+            if plot_ids:  # Only process if we have plot IDs
+                site_data = get_plotting_data(df, plot_ids, variable)
+                for _, row in site_data.iterrows():
+                    plot_data.append({
+                        'site': site,
+                        'plot': row['plot'],
+                        'value': row[variable]
+                    })
+        except Exception as e:
+            # Skip sites that cause errors (e.g., no matching data)
+            continue
+    
+    return {"data": plot_data}
 
 @app.get("/api/commodity-prices")
 async def get_commodity_prices():
