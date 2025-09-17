@@ -249,6 +249,99 @@ async def get_plot_data_json(variable: str, sites: str = None, system: str = Non
 
     return {"data": plot_data}
 
+@app.get("/api/boxplot-data-json")
+async def get_boxplot_data_json(variable: str, site: str, systems: str = None, phases: str = None):
+    """API endpoint to get boxplot data for compare mode"""
+    df = load_data()
+    
+    if not site:
+        return {"error": "Site is required for boxplot data"}
+    
+    # Parse systems and phases
+    selected_systems = [s.strip() for s in systems.split(',')] if systems else []
+    selected_phases = [p.strip() for p in phases.split(',')] if phases else []
+    
+    # Determine comparison type
+    if len(selected_systems) >= 2:
+        comparison_type = "systems"
+        comparison_items = selected_systems
+    elif len(selected_phases) >= 2:
+        comparison_type = "phases" 
+        comparison_items = selected_phases
+    else:
+        return {"error": "Need at least 2 systems OR 2 phases for comparison"}
+    
+    boxplot_data = {}
+    
+    try:
+        for item in comparison_items:
+            if comparison_type == "systems":
+                # Get all phases for this system
+                if selected_phases:
+                    # Specific phases requested
+                    for phase in selected_phases:
+                        plot_ids = get_plot_id_values(df, site, item, phase)
+                        key = f"{item}_{phase}" if len(selected_phases) > 1 else item
+                        if plot_ids:
+                            site_data = get_plotting_data(df, plot_ids, variable)
+                            boxplot_data[key] = []
+                            for _, row in site_data.iterrows():
+                                if not pd.isna(row[variable]):
+                                    boxplot_data[key].append({
+                                        'plot': row['plot'],
+                                        'value': float(row[variable])
+                                    })
+                else:
+                    # All phases for this system
+                    plot_ids = get_plot_id_values(df, site, item, None)
+                    if plot_ids:
+                        site_data = get_plotting_data(df, plot_ids, variable)
+                        boxplot_data[item] = []
+                        for _, row in site_data.iterrows():
+                            if not pd.isna(row[variable]):
+                                boxplot_data[item].append({
+                                    'plot': row['plot'],
+                                    'value': float(row[variable])
+                                })
+            else:  # comparison_type == "phases"
+                if selected_systems:
+                    # Specific systems requested
+                    for system in selected_systems:
+                        plot_ids = get_plot_id_values(df, site, system, item)
+                        key = f"{system}_{item}" if len(selected_systems) > 1 else item
+                        if plot_ids:
+                            site_data = get_plotting_data(df, plot_ids, variable)
+                            boxplot_data[key] = []
+                            for _, row in site_data.iterrows():
+                                if not pd.isna(row[variable]):
+                                    boxplot_data[key].append({
+                                        'plot': row['plot'],
+                                        'value': float(row[variable])
+                                    })
+                else:
+                    # All systems for this phase - get systems for this site first
+                    available_systems = get_unique_systems(df, site)
+                    combined_data = []
+                    for system in available_systems:
+                        plot_ids = get_plot_id_values(df, site, system, item)
+                        if plot_ids:
+                            site_data = get_plotting_data(df, plot_ids, variable)
+                            for _, row in site_data.iterrows():
+                                if not pd.isna(row[variable]):
+                                    combined_data.append({
+                                        'plot': row['plot'],
+                                        'value': float(row[variable])
+                                    })
+                    boxplot_data[item] = combined_data
+                    
+    except Exception as e:
+        return {"error": f"Error processing boxplot data: {str(e)}"}
+    
+    return {
+        "data": boxplot_data,
+        "comparison_type": comparison_type
+    }
+
 if __name__ == "__main__":
     import uvicorn
     import os

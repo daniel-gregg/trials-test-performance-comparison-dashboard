@@ -151,6 +151,59 @@
             background-color: #c82333 !important;
             border-color: #bd2130 !important;
         }
+
+        /* Radio button styling */
+        .radio-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 8px;
+        }
+
+        .radio-label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-weight: normal;
+            margin-bottom: 0;
+        }
+
+        .radio-label input[type="radio"] {
+            margin-right: 6px;
+        }
+
+        /* Checkbox group styling for compare mode */
+        .checkbox-group {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 8px;
+            background: white;
+        }
+
+        .checkbox-label {
+            display: block;
+            margin-bottom: 5px;
+            cursor: pointer;
+            font-weight: normal;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            margin-right: 6px;
+        }
+
+        /* Compare mode specific styling */
+        .compare-required {
+            border-color: #dc3545 !important;
+            box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.2) !important;
+        }
+
+        .compare-warning {
+            color: #dc3545;
+            font-size: 12px;
+            margin-top: 5px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -176,10 +229,27 @@
                 </div>
 
                 <div class="form-group">
+                    <label>Plot Mode:</label>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="plotMode" value="scatterplot" checked>
+                            <span>Scatterplot</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="plotMode" value="compare">
+                            <span>Compare (Boxplot)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
                     <label for="site">Field Site:</label>
                     <select id="site" class="form-control">
                         <option value="">All sites (comparison across all field sites)</option>
                     </select>
+                    <div id="compareWarning" class="compare-warning" style="display: none;">
+                        In compare mode: Select exactly one site
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -187,6 +257,12 @@
                     <select id="system" class="form-control">
                         <option value="">All systems (optional filter)</option>
                     </select>
+                    <div id="systemCheckboxes" class="checkbox-group" style="display: none;">
+                        <!-- Checkboxes will be populated dynamically -->
+                    </div>
+                    <div id="systemWarning" class="compare-warning" style="display: none;">
+                        Select at least 2 systems OR 1 system and 2+ phases
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -194,6 +270,12 @@
                     <select id="phase" class="form-control">
                         <option value="">All phases (optional filter)</option>
                     </select>
+                    <div id="phaseCheckboxes" class="checkbox-group" style="display: none;">
+                        <!-- Checkboxes will be populated dynamically -->
+                    </div>
+                    <div id="phaseWarning" class="compare-warning" style="display: none;">
+                        Select at least 2 phases OR 2+ systems and 1 phase
+                    </div>
                 </div>
 
                 <button id="plotBtn" class="btn" disabled>Plot Data</button>
@@ -220,6 +302,9 @@
         let selectedSystem = '';
         let selectedPhase = '';
         let selectedVariable = '';
+        let plotMode = 'scatterplot'; // New: track current plot mode
+        let selectedSystems = []; // New: for compare mode multi-selection
+        let selectedPhases = []; // New: for compare mode multi-selection
 
         // Initialize the dashboard
         document.addEventListener('DOMContentLoaded', function() {
@@ -230,6 +315,15 @@
         });
 
         function setupEventListeners() {
+            // Plot mode radio button listeners
+            document.querySelectorAll('input[name="plotMode"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    plotMode = this.value;
+                    updatePlotModeInterface();
+                    updatePlotButton();
+                });
+            });
+
             document.getElementById('variable').addEventListener('change', function() {
                 selectedVariable = this.value;
                 updatePlotButton();
@@ -239,7 +333,9 @@
             document.getElementById('site').addEventListener('change', function() {
                 selectedSite = this.value;
                 loadSystems(); // Reload systems when site changes
+                loadPhases(); // Reload phases when site changes
                 updatePlotButton();
+                updateCompareValidation();
             });
 
             document.getElementById('system').addEventListener('change', function() {
@@ -343,6 +439,250 @@
             }
         }
 
+        function updatePlotModeInterface() {
+            const isCompareMode = plotMode === 'compare';
+            
+            // Update site selection interface
+            const siteSelect = document.getElementById('site');
+            const compareWarning = document.getElementById('compareWarning');
+            
+            if (isCompareMode) {
+                // In compare mode, require exactly one site
+                if (siteSelect.value === '') {
+                    siteSelect.classList.add('compare-required');
+                    compareWarning.style.display = 'block';
+                } else {
+                    siteSelect.classList.remove('compare-required');
+                    compareWarning.style.display = 'none';
+                }
+                
+                // Remove "All sites" option in compare mode
+                const allSitesOption = siteSelect.querySelector('option[value=""]');
+                if (allSitesOption) {
+                    allSitesOption.style.display = 'none';
+                }
+            } else {
+                // In scatterplot mode, allow all sites selection
+                siteSelect.classList.remove('compare-required');
+                compareWarning.style.display = 'none';
+                
+                const allSitesOption = siteSelect.querySelector('option[value=""]');
+                if (allSitesOption) {
+                    allSitesOption.style.display = 'block';
+                }
+            }
+            
+            // Toggle between dropdown and checkbox interfaces
+            toggleSystemInterface(isCompareMode);
+            togglePhaseInterface(isCompareMode);
+            
+            updateCompareValidation();
+        }
+
+        function toggleSystemInterface(isCompareMode) {
+            const systemSelect = document.getElementById('system');
+            const systemCheckboxes = document.getElementById('systemCheckboxes');
+            
+            if (isCompareMode) {
+                systemSelect.style.display = 'none';
+                systemCheckboxes.style.display = 'block';
+                populateSystemCheckboxes();
+            } else {
+                systemSelect.style.display = 'block';
+                systemCheckboxes.style.display = 'none';
+            }
+        }
+
+        function togglePhaseInterface(isCompareMode) {
+            const phaseSelect = document.getElementById('phase');
+            const phaseCheckboxes = document.getElementById('phaseCheckboxes');
+            
+            if (isCompareMode) {
+                phaseSelect.style.display = 'none';
+                phaseCheckboxes.style.display = 'block';
+                populatePhaseCheckboxes();
+            } else {
+                phaseSelect.style.display = 'block';
+                phaseCheckboxes.style.display = 'none';
+            }
+        }
+
+        function populateSystemCheckboxes() {
+            const systemCheckboxes = document.getElementById('systemCheckboxes');
+            systemCheckboxes.innerHTML = '';
+            
+            if (!selectedSite) return;
+            
+            fetch(`/api/systems-json?site=${encodeURIComponent(selectedSite)}`)
+                .then(response => response.json())
+                .then(data => {
+                    data.systems.forEach(system => {
+                        const label = document.createElement('label');
+                        label.className = 'checkbox-label';
+                        
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.value = system;
+                        checkbox.addEventListener('change', handleSystemCheckboxChange);
+                        
+                        const span = document.createElement('span');
+                        span.textContent = system;
+                        
+                        label.appendChild(checkbox);
+                        label.appendChild(span);
+                        systemCheckboxes.appendChild(label);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading systems for checkboxes:', error);
+                });
+        }
+
+        function populatePhaseCheckboxes() {
+            const phaseCheckboxes = document.getElementById('phaseCheckboxes');
+            phaseCheckboxes.innerHTML = '';
+            
+            if (!selectedSite) return;
+            
+            // Get all phases for the selected site
+            const phases = new Set();
+            
+            // If specific systems are selected, get phases for those systems
+            if (selectedSystems.length > 0) {
+                const promises = selectedSystems.map(system => 
+                    fetch(`/api/phases-json?site=${encodeURIComponent(selectedSite)}&system=${encodeURIComponent(system)}`)
+                        .then(response => response.json())
+                        .then(data => data.phases.forEach(phase => phases.add(phase)))
+                        .catch(() => {}) // Ignore errors
+                );
+                
+                Promise.all(promises).then(() => {
+                    renderPhaseCheckboxes(Array.from(phases).sort());
+                });
+            } else {
+                // Get all phases for the site
+                fetch(`/api/sites-json`)
+                    .then(response => response.json())
+                    .then(() => {
+                        // Get phases across all systems for the site
+                        return fetch(`/api/systems-json?site=${encodeURIComponent(selectedSite)}`);
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        const promises = data.systems.map(system => 
+                            fetch(`/api/phases-json?site=${encodeURIComponent(selectedSite)}&system=${encodeURIComponent(system)}`)
+                                .then(response => response.json())
+                                .then(data => data.phases.forEach(phase => phases.add(phase)))
+                                .catch(() => {}) // Ignore errors
+                        );
+                        
+                        Promise.all(promises).then(() => {
+                            renderPhaseCheckboxes(Array.from(phases).sort());
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error loading phases for checkboxes:', error);
+                    });
+            }
+        }
+
+        function renderPhaseCheckboxes(phases) {
+            const phaseCheckboxes = document.getElementById('phaseCheckboxes');
+            phaseCheckboxes.innerHTML = '';
+            
+            phases.forEach(phase => {
+                const label = document.createElement('label');
+                label.className = 'checkbox-label';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = phase;
+                checkbox.addEventListener('change', handlePhaseCheckboxChange);
+                
+                const span = document.createElement('span');
+                span.textContent = phase;
+                
+                label.appendChild(checkbox);
+                label.appendChild(span);
+                phaseCheckboxes.appendChild(label);
+            });
+        }
+
+        function handleSystemCheckboxChange(e) {
+            const value = e.target.value;
+            if (e.target.checked) {
+                if (!selectedSystems.includes(value)) {
+                    selectedSystems.push(value);
+                }
+            } else {
+                selectedSystems = selectedSystems.filter(s => s !== value);
+            }
+            
+            // Repopulate phases when systems change
+            populatePhaseCheckboxes();
+            updateCompareValidation();
+            updatePlotButton();
+        }
+
+        function handlePhaseCheckboxChange(e) {
+            const value = e.target.value;
+            if (e.target.checked) {
+                if (!selectedPhases.includes(value)) {
+                    selectedPhases.push(value);
+                }
+            } else {
+                selectedPhases = selectedPhases.filter(p => p !== value);
+            }
+            
+            updateCompareValidation();
+            updatePlotButton();
+        }
+
+        function updateCompareValidation() {
+            if (plotMode !== 'compare') return;
+            
+            const systemWarning = document.getElementById('systemWarning');
+            const phaseWarning = document.getElementById('phaseWarning');
+            const compareWarning = document.getElementById('compareWarning');
+            
+            let isValid = true;
+            
+            // Check site selection
+            if (!selectedSite) {
+                document.getElementById('site').classList.add('compare-required');
+                compareWarning.style.display = 'block';
+                isValid = false;
+            } else {
+                document.getElementById('site').classList.remove('compare-required');
+                compareWarning.style.display = 'none';
+            }
+            
+            // Check system/phase selection requirements
+            const hasMultipleSystems = selectedSystems.length >= 2;
+            const hasMultiplePhases = selectedPhases.length >= 2;
+            const hasOneSystemMultiplePhases = selectedSystems.length === 1 && selectedPhases.length >= 2;
+            const hasNoSystemsMultiplePhases = selectedSystems.length === 0 && selectedPhases.length >= 2;
+            
+            if (!hasMultipleSystems && !hasOneSystemMultiplePhases && !hasNoSystemsMultiplePhases) {
+                if (selectedSystems.length === 0 && selectedPhases.length < 2) {
+                    systemWarning.textContent = 'Select at least 2 systems OR 2+ phases';
+                    systemWarning.style.display = 'block';
+                } else if (selectedSystems.length === 1 && selectedPhases.length < 2) {
+                    phaseWarning.textContent = 'Select at least 2 phases when only 1 system is selected';
+                    phaseWarning.style.display = 'block';
+                } else {
+                    systemWarning.textContent = 'Select at least 2 systems OR 1 system with 2+ phases';
+                    systemWarning.style.display = 'block';
+                }
+                isValid = false;
+            } else {
+                systemWarning.style.display = 'none';
+                phaseWarning.style.display = 'none';
+            }
+            
+            return isValid;
+        }
+
         function loadPhases() {
             if (!selectedSystem) return;
 
@@ -415,9 +755,18 @@
 
         function updatePlotButton() {
             const plotBtn = document.getElementById('plotBtn');
-            // Allow plotting with just a variable selected
-            const canPlot = selectedVariable;
-            plotBtn.disabled = !canPlot;
+            
+            if (plotMode === 'compare') {
+                // In compare mode, need variable and valid compare selections
+                const hasVariable = selectedVariable;
+                const isCompareValid = updateCompareValidation();
+                const canPlot = hasVariable && isCompareValid;
+                plotBtn.disabled = !canPlot;
+            } else {
+                // In scatterplot mode, allow plotting with just a variable selected
+                const canPlot = selectedVariable;
+                plotBtn.disabled = !canPlot;
+            }
         }
 
         function generatePlot() {
@@ -430,6 +779,14 @@
             document.getElementById('plotContainer').innerHTML = '<div class="loading">Generating plot...</div>';
             hideError();
 
+            if (plotMode === 'compare') {
+                generateBoxPlot();
+            } else {
+                generateScatterPlot();
+            }
+        }
+
+        function generateScatterPlot() {
             // Build API URL based on selection level
             let apiUrl = `/api/plot-data-json?variable=${encodeURIComponent(selectedVariable)}`;
             
@@ -467,6 +824,43 @@
                     console.error('Error fetching plot data:', error);
                     showError('Failed to fetch plot data');
                     document.getElementById('plotContainer').innerHTML = '<div class="loading">Error loading plot data</div>';
+                });
+        }
+
+        function generateBoxPlot() {
+            // Build API URL for boxplot data
+            let apiUrl = `/api/boxplot-data-json?variable=${encodeURIComponent(selectedVariable)}&site=${encodeURIComponent(selectedSite)}`;
+            
+            // Add systems or phases based on selection
+            if (selectedSystems.length > 0) {
+                apiUrl += `&systems=${encodeURIComponent(selectedSystems.join(','))}`;
+            }
+            
+            if (selectedPhases.length > 0) {
+                apiUrl += `&phases=${encodeURIComponent(selectedPhases.join(','))}`;
+            }
+
+            // Fetch boxplot data
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        showError(data.error);
+                        document.getElementById('plotContainer').innerHTML = '<div class="loading">Error: ' + data.error + '</div>';
+                        return;
+                    }
+                    
+                    if (data.data && Object.keys(data.data).length > 0) {
+                        createBoxPlot(data.data, data.comparison_type);
+                    } else {
+                        showError('No data found for the selected parameters');
+                        document.getElementById('plotContainer').innerHTML = '<div class="loading">No data available for selected parameters</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching boxplot data:', error);
+                    showError('Failed to fetch boxplot data');
+                    document.getElementById('plotContainer').innerHTML = '<div class="loading">Error loading boxplot data</div>';
                 });
         }
 
@@ -734,6 +1128,359 @@
 
             // Add to container
             plotContainer.appendChild(svg);
+        }
+
+        function createBoxPlot(data, comparisonType) {
+            const plotContainer = document.getElementById('plotContainer');
+            
+            // Clear the container
+            plotContainer.innerHTML = '';
+
+            // Create main container with data aggregation toggle
+            const mainContainer = document.createElement('div');
+            
+            // Add aggregation toggle buttons
+            const toggleContainer = document.createElement('div');
+            toggleContainer.style.marginBottom = '15px';
+            toggleContainer.style.textAlign = 'center';
+            
+            const toggleLabel = document.createElement('span');
+            toggleLabel.textContent = 'Data view: ';
+            toggleLabel.style.marginRight = '10px';
+            toggleLabel.style.fontWeight = 'bold';
+            
+            const cumulativeBtn = document.createElement('button');
+            cumulativeBtn.textContent = 'Cumulative by ID';
+            cumulativeBtn.className = 'btn';
+            cumulativeBtn.style.marginRight = '10px';
+            cumulativeBtn.style.padding = '5px 10px';
+            cumulativeBtn.style.fontSize = '12px';
+            
+            const plotSiteBtn = document.createElement('button');
+            plotSiteBtn.textContent = 'By Plot Site';
+            plotSiteBtn.className = 'btn';
+            plotSiteBtn.style.padding = '5px 10px';
+            plotSiteBtn.style.fontSize = '12px';
+            
+            // Set initial active state
+            let currentAggregation = 'cumulative'; // Default to cumulative
+            updateAggregationButtons();
+            
+            function updateAggregationButtons() {
+                if (currentAggregation === 'cumulative') {
+                    cumulativeBtn.style.backgroundColor = '#4CAF50';
+                    cumulativeBtn.style.color = 'white';
+                    plotSiteBtn.style.backgroundColor = '#f8f9fa';
+                    plotSiteBtn.style.color = '#333';
+                } else {
+                    plotSiteBtn.style.backgroundColor = '#4CAF50';
+                    plotSiteBtn.style.color = 'white';
+                    cumulativeBtn.style.backgroundColor = '#f8f9fa';
+                    cumulativeBtn.style.color = '#333';
+                }
+            }
+            
+            cumulativeBtn.addEventListener('click', () => {
+                currentAggregation = 'cumulative';
+                updateAggregationButtons();
+                renderBoxPlot();
+            });
+            
+            plotSiteBtn.addEventListener('click', () => {
+                currentAggregation = 'plot_site';
+                updateAggregationButtons();
+                renderBoxPlot();
+            });
+            
+            toggleContainer.appendChild(toggleLabel);
+            toggleContainer.appendChild(cumulativeBtn);
+            toggleContainer.appendChild(plotSiteBtn);
+            mainContainer.appendChild(toggleContainer);
+            
+            // Create plot container
+            const svgContainer = document.createElement('div');
+            svgContainer.id = 'boxplotSvgContainer';
+            mainContainer.appendChild(svgContainer);
+            
+            plotContainer.appendChild(mainContainer);
+            
+            // Initial render
+            renderBoxPlot();
+            
+            function renderBoxPlot() {
+                const container = document.getElementById('boxplotSvgContainer');
+                container.innerHTML = '';
+                
+                // Process data based on aggregation type
+                const processedData = processBoxPlotData(data, currentAggregation);
+                
+                // Create SVG
+                const svgWidth = 800;
+                const svgHeight = 500;
+                const margin = { top: 80, right: 50, bottom: 100, left: 80 };
+                const plotWidth = svgWidth - margin.left - margin.right;
+                const plotHeight = svgHeight - margin.top - margin.bottom;
+
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.setAttribute('width', svgWidth);
+                svg.setAttribute('height', svgHeight);
+                
+                // Determine plot title and labels
+                let plotTitle, xAxisLabel;
+                if (comparisonType === 'systems') {
+                    plotTitle = `${selectedVariable} by System`;
+                    xAxisLabel = 'System';
+                } else {
+                    plotTitle = `${selectedVariable} by Phase`;
+                    xAxisLabel = 'Phase';
+                }
+                
+                const aggregationLabel = currentAggregation === 'cumulative' ? 'Cumulative by ID' : 'By Plot Site';
+                
+                // Add title
+                const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                title.setAttribute('x', svgWidth / 2);
+                title.setAttribute('y', 30);
+                title.setAttribute('text-anchor', 'middle');
+                title.setAttribute('font-family', 'Arial, sans-serif');
+                title.setAttribute('font-size', '16');
+                title.setAttribute('font-weight', 'bold');
+                title.textContent = plotTitle;
+                svg.appendChild(title);
+                
+                // Add subtitle
+                const subtitle = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                subtitle.setAttribute('x', svgWidth / 2);
+                subtitle.setAttribute('y', 50);
+                subtitle.setAttribute('text-anchor', 'middle');
+                subtitle.setAttribute('font-family', 'Arial, sans-serif');
+                subtitle.setAttribute('font-size', '12');
+                subtitle.setAttribute('fill', '#666');
+                subtitle.textContent = `Site: ${selectedSite} | ${aggregationLabel}`;
+                svg.appendChild(subtitle);
+                
+                // Get all values for scaling
+                const allValues = Object.values(processedData).flat();
+                const minValue = Math.min(...allValues);
+                const maxValue = Math.max(...allValues);
+                const valueRange = maxValue - minValue;
+                const padding = valueRange * 0.1;
+                
+                // Create scales
+                const categories = Object.keys(processedData);
+                const categoryWidth = plotWidth / categories.length;
+                
+                function scaleX(categoryIndex) {
+                    return margin.left + (categoryIndex * categoryWidth) + (categoryWidth / 2);
+                }
+                
+                function scaleY(value) {
+                    return margin.top + plotHeight - ((value - minValue + padding) / (valueRange + 2 * padding)) * plotHeight;
+                }
+                
+                // Colors for different categories
+                const colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
+                
+                // Draw boxes
+                categories.forEach((category, categoryIndex) => {
+                    const values = processedData[category].sort((a, b) => a - b);
+                    const color = colors[categoryIndex % colors.length];
+                    
+                    if (values.length === 0) return;
+                    
+                    // Calculate box plot statistics
+                    const q1 = calculatePercentile(values, 25);
+                    const median = calculatePercentile(values, 50);
+                    const q3 = calculatePercentile(values, 75);
+                    const iqr = q3 - q1;
+                    const lowerWhisker = Math.max(values[0], q1 - 1.5 * iqr);
+                    const upperWhisker = Math.min(values[values.length - 1], q3 + 1.5 * iqr);
+                    
+                    const x = scaleX(categoryIndex);
+                    const boxWidth = Math.min(categoryWidth * 0.6, 60);
+                    
+                    // Draw whiskers
+                    const whiskerLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    whiskerLine.setAttribute('x1', x);
+                    whiskerLine.setAttribute('y1', scaleY(lowerWhisker));
+                    whiskerLine.setAttribute('x2', x);
+                    whiskerLine.setAttribute('y2', scaleY(upperWhisker));
+                    whiskerLine.setAttribute('stroke', '#333');
+                    whiskerLine.setAttribute('stroke-width', '1');
+                    svg.appendChild(whiskerLine);
+                    
+                    // Draw whisker caps
+                    [lowerWhisker, upperWhisker].forEach(value => {
+                        const cap = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                        cap.setAttribute('x1', x - boxWidth / 4);
+                        cap.setAttribute('y1', scaleY(value));
+                        cap.setAttribute('x2', x + boxWidth / 4);
+                        cap.setAttribute('y2', scaleY(value));
+                        cap.setAttribute('stroke', '#333');
+                        cap.setAttribute('stroke-width', '1');
+                        svg.appendChild(cap);
+                    });
+                    
+                    // Draw box
+                    const box = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    box.setAttribute('x', x - boxWidth / 2);
+                    box.setAttribute('y', scaleY(q3));
+                    box.setAttribute('width', boxWidth);
+                    box.setAttribute('height', scaleY(q1) - scaleY(q3));
+                    box.setAttribute('fill', color);
+                    box.setAttribute('fill-opacity', '0.7');
+                    box.setAttribute('stroke', '#333');
+                    box.setAttribute('stroke-width', '1');
+                    svg.appendChild(box);
+                    
+                    // Draw median line
+                    const medianLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    medianLine.setAttribute('x1', x - boxWidth / 2);
+                    medianLine.setAttribute('y1', scaleY(median));
+                    medianLine.setAttribute('x2', x + boxWidth / 2);
+                    medianLine.setAttribute('y2', scaleY(median));
+                    medianLine.setAttribute('stroke', '#333');
+                    medianLine.setAttribute('stroke-width', '2');
+                    svg.appendChild(medianLine);
+                    
+                    // Draw outliers
+                    values.forEach(value => {
+                        if (value < lowerWhisker || value > upperWhisker) {
+                            const outlier = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                            outlier.setAttribute('cx', x);
+                            outlier.setAttribute('cy', scaleY(value));
+                            outlier.setAttribute('r', '3');
+                            outlier.setAttribute('fill', color);
+                            outlier.setAttribute('stroke', '#333');
+                            outlier.setAttribute('stroke-width', '1');
+                            svg.appendChild(outlier);
+                        }
+                    });
+                });
+                
+                // Draw axes
+                const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                xAxis.setAttribute('x1', margin.left);
+                xAxis.setAttribute('y1', margin.top + plotHeight);
+                xAxis.setAttribute('x2', margin.left + plotWidth);
+                xAxis.setAttribute('y2', margin.top + plotHeight);
+                xAxis.setAttribute('stroke', '#333');
+                svg.appendChild(xAxis);
+                
+                const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                yAxis.setAttribute('x1', margin.left);
+                yAxis.setAttribute('y1', margin.top);
+                yAxis.setAttribute('x2', margin.left);
+                yAxis.setAttribute('y2', margin.top + plotHeight);
+                yAxis.setAttribute('stroke', '#333');
+                svg.appendChild(yAxis);
+                
+                // Add axis labels
+                const xLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                xLabel.setAttribute('x', margin.left + plotWidth / 2);
+                xLabel.setAttribute('y', svgHeight - 30);
+                xLabel.setAttribute('text-anchor', 'middle');
+                xLabel.setAttribute('font-family', 'Arial, sans-serif');
+                xLabel.setAttribute('font-size', '14');
+                xLabel.setAttribute('font-weight', 'bold');
+                xLabel.textContent = xAxisLabel;
+                svg.appendChild(xLabel);
+                
+                const yLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                yLabel.setAttribute('x', 20);
+                yLabel.setAttribute('y', margin.top + plotHeight / 2);
+                yLabel.setAttribute('text-anchor', 'middle');
+                yLabel.setAttribute('transform', `rotate(-90, 20, ${margin.top + plotHeight / 2})`);
+                yLabel.setAttribute('font-family', 'Arial, sans-serif');
+                yLabel.setAttribute('font-size', '14');
+                yLabel.setAttribute('font-weight', 'bold');
+                yLabel.textContent = selectedVariable;
+                svg.appendChild(yLabel);
+                
+                // Add category labels
+                categories.forEach((category, categoryIndex) => {
+                    const x = scaleX(categoryIndex);
+                    
+                    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    label.setAttribute('x', x);
+                    label.setAttribute('y', margin.top + plotHeight + 20);
+                    label.setAttribute('text-anchor', 'middle');
+                    label.setAttribute('font-family', 'Arial, sans-serif');
+                    label.setAttribute('font-size', '12');
+                    label.setAttribute('fill', '#666');
+                    label.textContent = category;
+                    svg.appendChild(label);
+                });
+                
+                // Add Y-axis ticks and labels
+                const tickCount = 5;
+                for (let i = 0; i <= tickCount; i++) {
+                    const value = minValue - padding + (i / tickCount) * (valueRange + 2 * padding);
+                    const y = scaleY(value);
+                    
+                    const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    tick.setAttribute('x1', margin.left - 5);
+                    tick.setAttribute('y1', y);
+                    tick.setAttribute('x2', margin.left);
+                    tick.setAttribute('y2', y);
+                    tick.setAttribute('stroke', '#666');
+                    svg.appendChild(tick);
+                    
+                    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    label.setAttribute('x', margin.left - 10);
+                    label.setAttribute('y', y + 4);
+                    label.setAttribute('text-anchor', 'end');
+                    label.setAttribute('font-family', 'Arial, sans-serif');
+                    label.setAttribute('font-size', '12');
+                    label.setAttribute('fill', '#666');
+                    label.textContent = value.toFixed(1);
+                    svg.appendChild(label);
+                }
+                
+                container.appendChild(svg);
+            }
+        }
+
+        function processBoxPlotData(data, aggregationType) {
+            const processed = {};
+            
+            Object.keys(data).forEach(category => {
+                const categoryData = data[category];
+                
+                if (aggregationType === 'cumulative') {
+                    // Sum values by plot ID, then collect all sums
+                    const plotSums = {};
+                    categoryData.forEach(item => {
+                        const plotId = item.plot;
+                        if (!plotSums[plotId]) {
+                            plotSums[plotId] = 0;
+                        }
+                        plotSums[plotId] += item.value;
+                    });
+                    processed[category] = Object.values(plotSums);
+                } else {
+                    // Use all individual observations
+                    processed[category] = categoryData.map(item => item.value);
+                }
+            });
+            
+            return processed;
+        }
+
+        function calculatePercentile(sortedArray, percentile) {
+            if (sortedArray.length === 0) return 0;
+            if (sortedArray.length === 1) return sortedArray[0];
+            
+            const index = (percentile / 100) * (sortedArray.length - 1);
+            const lower = Math.floor(index);
+            const upper = Math.ceil(index);
+            
+            if (lower === upper) {
+                return sortedArray[lower];
+            }
+            
+            const weight = index - lower;
+            return sortedArray[lower] * (1 - weight) + sortedArray[upper] * weight;
         }
 
         function showError(message) {
