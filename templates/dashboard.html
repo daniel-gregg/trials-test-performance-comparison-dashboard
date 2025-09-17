@@ -118,6 +118,39 @@
         .multi-select input[type="checkbox"] {
             margin-right: 8px;
         }
+
+        /* Site info styling */
+        .site-info {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 8px 12px;
+            background-color: #f8f9fa;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* Variable requirement styling */
+        .variable-required.required {
+            border-color: #dc3545 !important;
+            box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.2) !important;
+        }
+
+        .variable-warning {
+            color: #dc3545;
+            font-size: 12px;
+            margin-top: 5px;
+            font-weight: bold;
+        }
+
+        .btn.variable-required {
+            background-color: #dc3545 !important;
+            border-color: #dc3545 !important;
+        }
+
+        .btn.variable-required:hover {
+            background-color: #c82333 !important;
+            border-color: #bd2130 !important;
+        }
     </style>
 </head>
 <body>
@@ -133,30 +166,33 @@
                 <h3>Selection Parameters</h3>
 
                 <div class="form-group">
+                    <label for="variable">Variable:</label>
+                    <select id="variable" class="form-control variable-required">
+                        <option value="">Loading variables...</option>
+                    </select>
+                    <div id="variableWarning" class="variable-warning" style="display: none;">
+                        Select a variable to view scatterplot
+                    </div>
+                </div>
+
+                <div class="form-group">
                     <label for="sites">Field Sites:</label>
-                    <div id="sites" class="multi-select">
-                        <div class="loading">Loading sites...</div>
+                    <div id="sites" class="site-info">
+                        All sites (comparison across all field sites)
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label for="system">System:</label>
                     <select id="system" class="form-control">
-                        <option value="">Select a site first</option>
+                        <option value="">All systems (optional filter)</option>
                     </select>
                 </div>
 
                 <div class="form-group">
                     <label for="phase">Phase:</label>
                     <select id="phase" class="form-control">
-                        <option value="">Select a system first</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="variable">Variable:</label>
-                    <select id="variable" class="form-control">
-                        <option value="">Loading variables...</option>
+                        <option value="">All phases (optional filter)</option>
                     </select>
                 </div>
 
@@ -180,19 +216,25 @@
     <script>
         // Global state
         let availableSites = [];
-        let selectedSites = [];
+        let selectedSites = []; // Will remain empty since we're using all sites
         let selectedSystem = '';
         let selectedPhase = '';
         let selectedVariable = '';
 
         // Initialize the dashboard
         document.addEventListener('DOMContentLoaded', function() {
-            loadSites();
             loadVariables();
+            loadAllSystems(); // Load all systems instead of site-specific
             setupEventListeners();
         });
 
         function setupEventListeners() {
+            document.getElementById('variable').addEventListener('change', function() {
+                selectedVariable = this.value;
+                updatePlotButton();
+                updateVariableHighlight();
+            });
+
             document.getElementById('system').addEventListener('change', function() {
                 selectedSystem = this.value;
                 loadPhases();
@@ -204,83 +246,36 @@
                 updatePlotButton();
             });
 
-            document.getElementById('variable').addEventListener('change', function() {
-                selectedVariable = this.value;
-                updatePlotButton();
-            });
-
             document.getElementById('plotBtn').addEventListener('click', generatePlot);
         }
 
-        function loadSites() {
-            fetch('/api/sites-json')
-                .then(response => response.json())
-                .then(data => {
-                    availableSites = data.sites;
-                    renderSitesCheckboxes();
-                })
-                .catch(error => {
-                    console.error('Error loading sites:', error);
-                    showError('Failed to load sites');
-                });
-        }
-
-        function renderSitesCheckboxes() {
-            const container = document.getElementById('sites');
-            container.innerHTML = '';
-
-            availableSites.forEach(site => {
-                const label = document.createElement('label');
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.value = site;
-                checkbox.addEventListener('change', function() {
-                    if (this.checked) {
-                        if (!selectedSites.includes(site)) {
-                            selectedSites.push(site);
-                        }
-                    } else {
-                        selectedSites = selectedSites.filter(s => s !== site);
-                    }
-                    onSitesChanged();
-                });
-
-                label.appendChild(checkbox);
-                label.appendChild(document.createTextNode(site));
-                container.appendChild(label);
-            });
-        }
-
-        function onSitesChanged() {
-            // Reset dependent dropdowns
-            document.getElementById('system').innerHTML = '<option value="">Select a system</option>';
-            document.getElementById('phase').innerHTML = '<option value="">Select a phase</option>';
-            selectedSystem = '';
-            selectedPhase = '';
-
-            if (selectedSites.length > 0) {
-                // Load systems for the first selected site (could be enhanced to find common systems)
-                loadSystems(selectedSites[0]);
-            }
-
-            updatePlotButton();
-        }
-
-        function loadSystems(site) {
-            if (!site) return;
-
-            fetch(`/api/systems-json?site=${encodeURIComponent(site)}`)
+        function loadAllSystems() {
+            fetch('/api/systems-json?site=')
                 .then(response => response.json())
                 .then(data => {
                     const systemSelect = document.getElementById('system');
-                    systemSelect.innerHTML = '<option value="">Select a system</option>';
+                    systemSelect.innerHTML = '<option value="">All systems (optional filter)</option>';
 
-                    data.systems.forEach(system => {
-                        const option = document.createElement('option');
-                        option.value = system;
-                        option.textContent = system;
-                        systemSelect.appendChild(option);
-                    });
+                    // Get all unique systems across all sites
+                    fetch('/api/sites-json')
+                        .then(response => response.json())
+                        .then(sitesData => {
+                            const allSystems = new Set();
+                            const promises = sitesData.sites.map(site => 
+                                fetch(`/api/systems-json?site=${encodeURIComponent(site)}`)
+                                    .then(response => response.json())
+                                    .then(data => data.systems.forEach(system => allSystems.add(system)))
+                            );
+                            
+                            Promise.all(promises).then(() => {
+                                Array.from(allSystems).sort().forEach(system => {
+                                    const option = document.createElement('option');
+                                    option.value = system;
+                                    option.textContent = system;
+                                    systemSelect.appendChild(option);
+                                });
+                            });
+                        });
                 })
                 .catch(error => {
                     console.error('Error loading systems:', error);
@@ -288,26 +283,48 @@
                 });
         }
 
+        function updateVariableHighlight() {
+            const variableSelect = document.getElementById('variable');
+            const plotBtn = document.getElementById('plotBtn');
+            const warningDiv = document.getElementById('variableWarning');
+            
+            if (!selectedVariable) {
+                variableSelect.classList.add('required');
+                plotBtn.classList.add('variable-required');
+                warningDiv.style.display = 'block';
+            } else {
+                variableSelect.classList.remove('required');
+                plotBtn.classList.remove('variable-required');
+                warningDiv.style.display = 'none';
+            }
+        }
+
         function loadPhases() {
-            if (!selectedSites.length || !selectedSystem) return;
+            if (!selectedSystem) return;
 
-            // Use first selected site for phases
-            fetch(`/api/phases-json?site=${encodeURIComponent(selectedSites[0])}&system=${encodeURIComponent(selectedSystem)}`)
+            // Load phases for the selected system across all sites
+            fetch('/api/sites-json')
                 .then(response => response.json())
-                .then(data => {
-                    const phaseSelect = document.getElementById('phase');
-                    phaseSelect.innerHTML = '<option value="">Select a phase</option>';
-
-                    data.phases.forEach(phase => {
-                        const option = document.createElement('option');
-                        option.value = phase;
-                        option.textContent = phase;
-                        phaseSelect.appendChild(option);
+                .then(sitesData => {
+                    const allPhases = new Set();
+                    const promises = sitesData.sites.map(site => 
+                        fetch(`/api/phases-json?site=${encodeURIComponent(site)}&system=${encodeURIComponent(selectedSystem)}`)
+                            .then(response => response.json())
+                            .then(data => data.phases.forEach(phase => allPhases.add(phase)))
+                            .catch(() => {}) // Ignore errors for sites that don't have this system
+                    );
+                    
+                    Promise.all(promises).then(() => {
+                        const phaseSelect = document.getElementById('phase');
+                        phaseSelect.innerHTML = '<option value="">All phases (optional filter)</option>';
+                        
+                        Array.from(allPhases).sort().forEach(phase => {
+                            const option = document.createElement('option');
+                            option.value = phase;
+                            option.textContent = phase;
+                            phaseSelect.appendChild(option);
+                        });
                     });
-                })
-                .catch(error => {
-                    console.error('Error loading phases:', error);
-                    showError('Failed to load phases');
                 });
         }
 
@@ -324,6 +341,9 @@
                         option.textContent = variable;
                         variableSelect.appendChild(option);
                     });
+                    
+                    // Initialize variable highlighting
+                    updateVariableHighlight();
                 })
                 .catch(error => {
                     console.error('Error loading variables:', error);
