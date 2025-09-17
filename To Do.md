@@ -2,13 +2,15 @@
 
 This provides a short to-do list for next-stage updates/improvements.
 
-## Fix 'plot' button so that plotting can occur with any level of selection (including none).
+## ✅ COMPLETED: Fix 'plot' button so that plotting can occur with any level of selection (including none).
 
-* This should allow the user to click 'plot' at any stage - even if no subsets are selected
-* Plots should then have colours/shapes for different categories in each section. For example:
-    * sites should be coloured if no subsets are selection
-    * systems should be coloured if only a site is subsetted
-    * phases should be coloured if site and system act as subsets
+* ✅ This now allows the user to click 'plot' at any stage - even if no subsets are selected
+* ✅ Plots now have colours/shapes for different categories in each section. For example:
+    * ✅ sites are coloured if no subsets are selected
+    * ✅ systems are coloured if only a site is subsetted
+    * ✅ phases are coloured if site and system act as subsets
+* ✅ Implemented with dynamic plot titles, legends, and axis labels
+* ✅ Full backward compatibility maintained
 
 ## Integrate comparisons
 * Allow for the user to select a comparison set. For example:
