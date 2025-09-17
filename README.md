@@ -105,3 +105,113 @@ To run in development mode with auto-reload:
 ```bash
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
+
+## Deployment on Railway Platform
+
+This application is configured for easy deployment on [Railway](https://railway.app/), a modern cloud platform. Follow these steps to deploy:
+
+### Prerequisites
+- GitHub account
+- Railway account (sign up at [railway.app](https://railway.app/))
+
+### Deployment Steps
+
+#### 1. Prepare Your Repository
+The repository already includes the necessary Railway configuration files:
+- `Procfile` - Defines the web process command
+- `railway.json` - Railway-specific configuration and build settings
+- `.railwayignore` - Files to exclude from deployment
+- Updated `main.py` - Uses Railway's PORT environment variable
+
+#### 2. Deploy to Railway
+
+**Option A: Deploy via Railway Dashboard**
+1. Go to [railway.app](https://railway.app/) and sign in
+2. Click "New Project"
+3. Select "Deploy from GitHub repo"
+4. Choose this repository from your GitHub account
+5. Railway will automatically detect it's a Python project and use the configuration files
+
+**Option B: Deploy via Railway CLI**
+1. Install Railway CLI:
+   ```bash
+   npm install -g @railway/cli
+   ```
+2. Login to Railway:
+   ```bash
+   railway login
+   ```
+3. Initialize project in your repository:
+   ```bash
+   railway init
+   ```
+4. Deploy:
+   ```bash
+   railway up
+   ```
+
+#### 3. Configuration Details
+
+The deployment uses these configuration files:
+
+**Procfile:**
+```
+web: uvicorn main:app --host 0.0.0.0 --port $PORT
+```
+
+**railway.json:**
+- Uses NIXPACKS builder for automatic Python environment setup
+- Configures health checks on the root path (`/`)
+- Sets restart policy for reliability
+- Installs dependencies from `requirements.txt`
+
+#### 4. Environment Variables (Optional)
+Railway automatically provides the `PORT` environment variable. If you need to add custom environment variables:
+1. Go to your project dashboard on Railway
+2. Navigate to the "Variables" tab
+3. Add any required environment variables
+
+#### 5. Custom Domain (Optional)
+1. In your Railway project dashboard, go to "Settings"
+2. Click "Domains"
+3. Add your custom domain
+4. Configure your DNS provider to point to Railway's servers
+
+#### 6. Monitoring and Logs
+- **Logs**: View real-time logs in the Railway dashboard under "Deployments"
+- **Metrics**: Monitor CPU, memory, and network usage
+- **Health Checks**: Railway automatically monitors the `/` endpoint
+
+### Deployment Workflow Summary
+
+1. **Code Push**: Push code changes to your GitHub repository
+2. **Auto Deploy**: Railway automatically detects changes and redeploys
+3. **Build Process**: 
+   - Railway clones the repository
+   - Installs Python dependencies from `requirements.txt`
+   - Starts the application using the Procfile command
+4. **Live App**: Your app is available at `https://<your-app-name>.railway.app`
+
+### Troubleshooting
+
+**Common Issues:**
+- **Build Failures**: Check that all dependencies in `requirements.txt` are valid
+- **App Won't Start**: Verify the Procfile command is correct
+- **Port Issues**: Ensure the app uses the `PORT` environment variable
+
+**Checking Logs:**
+```bash
+railway logs
+```
+
+**Local Testing with Railway:**
+```bash
+railway run python main.py
+```
+
+### Cost Considerations
+- Railway offers a free tier with usage limits
+- Monitor your usage in the Railway dashboard
+- Consider upgrading to a paid plan for production applications
+
+For more information, visit the [Railway Documentation](https://docs.railway.app/).
