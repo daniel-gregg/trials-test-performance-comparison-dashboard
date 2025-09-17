@@ -176,10 +176,10 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="sites">Field Sites:</label>
-                    <div id="sites" class="site-info">
-                        All sites (comparison across all field sites)
-                    </div>
+                    <label for="site">Field Site:</label>
+                    <select id="site" class="form-control">
+                        <option value="">All sites (comparison across all field sites)</option>
+                    </select>
                 </div>
 
                 <div class="form-group">
@@ -216,7 +216,7 @@
     <script>
         // Global state
         let availableSites = [];
-        let selectedSites = []; // Will remain empty since we're using all sites
+        let selectedSite = ''; // Changed from selectedSites array to single selection
         let selectedSystem = '';
         let selectedPhase = '';
         let selectedVariable = '';
@@ -224,7 +224,8 @@
         // Initialize the dashboard
         document.addEventListener('DOMContentLoaded', function() {
             loadVariables();
-            loadAllSystems(); // Load all systems instead of site-specific
+            loadSites(); // Load sites first
+            loadSystems(); // Load systems based on site selection
             setupEventListeners();
         });
 
@@ -233,6 +234,12 @@
                 selectedVariable = this.value;
                 updatePlotButton();
                 updateVariableHighlight();
+            });
+
+            document.getElementById('site').addEventListener('change', function() {
+                selectedSite = this.value;
+                loadSystems(); // Reload systems when site changes
+                updatePlotButton();
             });
 
             document.getElementById('system').addEventListener('change', function() {
@@ -249,38 +256,75 @@
             document.getElementById('plotBtn').addEventListener('click', generatePlot);
         }
 
-        function loadAllSystems() {
-            fetch('/api/systems-json?site=')
+        function loadSites() {
+            fetch('/api/sites-json')
                 .then(response => response.json())
                 .then(data => {
-                    const systemSelect = document.getElementById('system');
-                    systemSelect.innerHTML = '<option value="">All systems (optional filter)</option>';
-
-                    // Get all unique systems across all sites
-                    fetch('/api/sites-json')
-                        .then(response => response.json())
-                        .then(sitesData => {
-                            const allSystems = new Set();
-                            const promises = sitesData.sites.map(site => 
-                                fetch(`/api/systems-json?site=${encodeURIComponent(site)}`)
-                                    .then(response => response.json())
-                                    .then(data => data.systems.forEach(system => allSystems.add(system)))
-                            );
-                            
-                            Promise.all(promises).then(() => {
-                                Array.from(allSystems).sort().forEach(system => {
-                                    const option = document.createElement('option');
-                                    option.value = system;
-                                    option.textContent = system;
-                                    systemSelect.appendChild(option);
-                                });
-                            });
-                        });
+                    availableSites = data.sites;
+                    const siteSelect = document.getElementById('site');
+                    siteSelect.innerHTML = '<option value="">All sites (comparison across all field sites)</option>';
+                    
+                    data.sites.forEach(site => {
+                        const option = document.createElement('option');
+                        option.value = site;
+                        option.textContent = site;
+                        siteSelect.appendChild(option);
+                    });
                 })
                 .catch(error => {
-                    console.error('Error loading systems:', error);
-                    showError('Failed to load systems');
+                    console.error('Error loading sites:', error);
+                    showError('Failed to load sites');
                 });
+        }
+
+        function loadSystems() {
+            const systemSelect = document.getElementById('system');
+            systemSelect.innerHTML = '<option value="">All systems (optional filter)</option>';
+            
+            if (!selectedSite) {
+                // Load all systems across all sites
+                fetch('/api/sites-json')
+                    .then(response => response.json())
+                    .then(sitesData => {
+                        const allSystems = new Set();
+                        const promises = sitesData.sites.map(site => 
+                            fetch(`/api/systems-json?site=${encodeURIComponent(site)}`)
+                                .then(response => response.json())
+                                .then(data => data.systems.forEach(system => allSystems.add(system)))
+                        );
+                        
+                        Promise.all(promises).then(() => {
+                            Array.from(allSystems).sort().forEach(system => {
+                                const option = document.createElement('option');
+                                option.value = system;
+                                option.textContent = system;
+                                systemSelect.appendChild(option);
+                            });
+                        });
+                    });
+            } else {
+                // Load systems for the selected site only
+                fetch(`/api/systems-json?site=${encodeURIComponent(selectedSite)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        data.systems.forEach(system => {
+                            const option = document.createElement('option');
+                            option.value = system;
+                            option.textContent = system;
+                            systemSelect.appendChild(option);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error loading systems:', error);
+                        showError('Failed to load systems');
+                    });
+            }
+            
+            // Clear phases when systems change
+            selectedSystem = '';
+            selectedPhase = '';
+            const phaseSelect = document.getElementById('phase');
+            phaseSelect.innerHTML = '<option value="">All phases (optional filter)</option>';
         }
 
         function updateVariableHighlight() {
@@ -302,30 +346,48 @@
         function loadPhases() {
             if (!selectedSystem) return;
 
-            // Load phases for the selected system across all sites
-            fetch('/api/sites-json')
-                .then(response => response.json())
-                .then(sitesData => {
-                    const allPhases = new Set();
-                    const promises = sitesData.sites.map(site => 
-                        fetch(`/api/phases-json?site=${encodeURIComponent(site)}&system=${encodeURIComponent(selectedSystem)}`)
-                            .then(response => response.json())
-                            .then(data => data.phases.forEach(phase => allPhases.add(phase)))
-                            .catch(() => {}) // Ignore errors for sites that don't have this system
-                    );
-                    
-                    Promise.all(promises).then(() => {
-                        const phaseSelect = document.getElementById('phase');
-                        phaseSelect.innerHTML = '<option value="">All phases (optional filter)</option>';
+            const phaseSelect = document.getElementById('phase');
+            phaseSelect.innerHTML = '<option value="">All phases (optional filter)</option>';
+
+            if (!selectedSite) {
+                // Load phases for the selected system across all sites
+                fetch('/api/sites-json')
+                    .then(response => response.json())
+                    .then(sitesData => {
+                        const allPhases = new Set();
+                        const promises = sitesData.sites.map(site => 
+                            fetch(`/api/phases-json?site=${encodeURIComponent(site)}&system=${encodeURIComponent(selectedSystem)}`)
+                                .then(response => response.json())
+                                .then(data => data.phases.forEach(phase => allPhases.add(phase)))
+                                .catch(() => {}) // Ignore errors for sites that don't have this system
+                        );
                         
-                        Array.from(allPhases).sort().forEach(phase => {
+                        Promise.all(promises).then(() => {
+                            Array.from(allPhases).sort().forEach(phase => {
+                                const option = document.createElement('option');
+                                option.value = phase;
+                                option.textContent = phase;
+                                phaseSelect.appendChild(option);
+                            });
+                        });
+                    });
+            } else {
+                // Load phases for the selected system and site
+                fetch(`/api/phases-json?site=${encodeURIComponent(selectedSite)}&system=${encodeURIComponent(selectedSystem)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        data.phases.forEach(phase => {
                             const option = document.createElement('option');
                             option.value = phase;
                             option.textContent = phase;
                             phaseSelect.appendChild(option);
                         });
+                    })
+                    .catch(error => {
+                        console.error('Error loading phases:', error);
+                        showError('Failed to load phases');
                     });
-                });
+            }
         }
 
         function loadVariables() {
@@ -372,9 +434,8 @@
             let apiUrl = `/api/plot-data-json?variable=${encodeURIComponent(selectedVariable)}`;
             
             // Add parameters based on what's selected
-            if (selectedSites.length > 0) {
-                const sitesParam = selectedSites.join(',');
-                apiUrl += `&sites=${encodeURIComponent(sitesParam)}`;
+            if (selectedSite) {
+                apiUrl += `&sites=${encodeURIComponent(selectedSite)}`;
             }
             
             if (selectedSystem) {
@@ -413,7 +474,7 @@
             // Determine the coloring scheme based on selection level
             let colorBy, groupBy, xAxisLabel, plotTitle, plotSubtitle;
             
-            if (selectedSites.length === 0) {
+            if (!selectedSite) {
                 // No site selection - color by site
                 colorBy = 'site';
                 groupBy = 'site';
@@ -421,26 +482,26 @@
                 plotTitle = `${selectedVariable} by Field Site`;
                 plotSubtitle = 'All sites, systems, and phases';
             } else if (!selectedSystem) {
-                // Site(s) selected but no system - color by system
+                // Site selected but no system - color by system
                 colorBy = 'system';
                 groupBy = 'system';
                 xAxisLabel = 'System';
                 plotTitle = `${selectedVariable} by System`;
-                plotSubtitle = `Sites: ${selectedSites.join(', ')}`;
+                plotSubtitle = `Site: ${selectedSite}`;
             } else if (!selectedPhase) {
-                // Site(s) and system selected but no phase - color by phase
+                // Site and system selected but no phase - color by phase
                 colorBy = 'phase';
                 groupBy = 'phase';
                 xAxisLabel = 'Phase';
                 plotTitle = `${selectedVariable} by Phase`;
-                plotSubtitle = `Sites: ${selectedSites.join(', ')}, System: ${selectedSystem}`;
+                plotSubtitle = `Site: ${selectedSite}, System: ${selectedSystem}`;
             } else {
-                // All levels selected - use traditional site grouping
+                // All levels selected - use traditional site grouping but will only show one site
                 colorBy = 'site';
                 groupBy = 'site';
                 xAxisLabel = 'Field Site';
                 plotTitle = `${selectedVariable} by Field Site`;
-                plotSubtitle = `System: ${selectedSystem}, Phase: ${selectedPhase}`;
+                plotSubtitle = `Site: ${selectedSite}, System: ${selectedSystem}, Phase: ${selectedPhase}`;
             }
 
             // Group data by the determined grouping variable
