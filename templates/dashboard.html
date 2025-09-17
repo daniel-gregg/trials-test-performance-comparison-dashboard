@@ -333,13 +333,14 @@
 
         function updatePlotButton() {
             const plotBtn = document.getElementById('plotBtn');
-            const canPlot = selectedSites.length > 0 && selectedSystem && selectedPhase && selectedVariable;
+            // Allow plotting with just a variable selected
+            const canPlot = selectedVariable;
             plotBtn.disabled = !canPlot;
         }
 
         function generatePlot() {
-            if (selectedSites.length === 0 || !selectedSystem || !selectedPhase || !selectedVariable) {
-                showError('Please select all parameters before plotting');
+            if (!selectedVariable) {
+                showError('Please select a variable before plotting');
                 return;
             }
 
@@ -347,13 +348,33 @@
             document.getElementById('plotContainer').innerHTML = '<div class="loading">Generating plot...</div>';
             hideError();
 
-            // Build the sites parameter (comma-separated)
-            const sitesParam = selectedSites.join(',');
+            // Build API URL based on selection level
+            let apiUrl = `/api/plot-data-json?variable=${encodeURIComponent(selectedVariable)}`;
+            
+            // Add parameters based on what's selected
+            if (selectedSites.length > 0) {
+                const sitesParam = selectedSites.join(',');
+                apiUrl += `&sites=${encodeURIComponent(sitesParam)}`;
+            }
+            
+            if (selectedSystem) {
+                apiUrl += `&system=${encodeURIComponent(selectedSystem)}`;
+            }
+            
+            if (selectedPhase) {
+                apiUrl += `&phase=${encodeURIComponent(selectedPhase)}`;
+            }
 
             // Fetch plot data
-            fetch(`/api/plot-data-json?sites=${encodeURIComponent(sitesParam)}&system=${encodeURIComponent(selectedSystem)}&phase=${encodeURIComponent(selectedPhase)}&variable=${encodeURIComponent(selectedVariable)}`)
+            fetch(apiUrl)
                 .then(response => response.json())
                 .then(data => {
+                    if (data.error) {
+                        showError(data.error);
+                        document.getElementById('plotContainer').innerHTML = '<div class="loading">Error: ' + data.error + '</div>';
+                        return;
+                    }
+                    
                     if (data.data && data.data.length > 0) {
                         createScatterPlot(data.data);
                     } else {
@@ -369,16 +390,50 @@
         }
 
         function createScatterPlot(data) {
-            // Group data by site for jittering
+            // Determine the coloring scheme based on selection level
+            let colorBy, groupBy, xAxisLabel, plotTitle, plotSubtitle;
+            
+            if (selectedSites.length === 0) {
+                // No site selection - color by site
+                colorBy = 'site';
+                groupBy = 'site';
+                xAxisLabel = 'Field Site';
+                plotTitle = `${selectedVariable} by Field Site`;
+                plotSubtitle = 'All sites, systems, and phases';
+            } else if (!selectedSystem) {
+                // Site(s) selected but no system - color by system
+                colorBy = 'system';
+                groupBy = 'system';
+                xAxisLabel = 'System';
+                plotTitle = `${selectedVariable} by System`;
+                plotSubtitle = `Sites: ${selectedSites.join(', ')}`;
+            } else if (!selectedPhase) {
+                // Site(s) and system selected but no phase - color by phase
+                colorBy = 'phase';
+                groupBy = 'phase';
+                xAxisLabel = 'Phase';
+                plotTitle = `${selectedVariable} by Phase`;
+                plotSubtitle = `Sites: ${selectedSites.join(', ')}, System: ${selectedSystem}`;
+            } else {
+                // All levels selected - use traditional site grouping
+                colorBy = 'site';
+                groupBy = 'site';
+                xAxisLabel = 'Field Site';
+                plotTitle = `${selectedVariable} by Field Site`;
+                plotSubtitle = `System: ${selectedSystem}, Phase: ${selectedPhase}`;
+            }
+
+            // Group data by the determined grouping variable
             const groupedData = {};
             data.forEach(point => {
-                if (!groupedData[point.site]) {
-                    groupedData[point.site] = [];
+                const groupKey = point[groupBy];
+                if (!groupedData[groupKey]) {
+                    groupedData[groupKey] = [];
                 }
-                groupedData[point.site].push(point);
+                groupedData[groupKey].push(point);
             });
 
-            const siteNames = Object.keys(groupedData);
+            const groupNames = Object.keys(groupedData);
             const plotContainer = document.getElementById('plotContainer');
 
             // Clear the container
@@ -387,7 +442,7 @@
             // Create SVG
             const svgWidth = 800;
             const svgHeight = 500;
-            const margin = { top: 60, right: 50, bottom: 80, left: 80 };
+            const margin = { top: 80, right: 50, bottom: 100, left: 80 };
             const plotWidth = svgWidth - margin.left - margin.right;
             const plotHeight = svgHeight - margin.top - margin.bottom;
 
@@ -405,13 +460,13 @@
             const yMin = minY - yPadding;
             const yMax = maxY + yPadding;
 
-            // Color palette for sites
-            const colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22'];
+            // Color palette - extended for more categories
+            const colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'];
 
             // Helper functions for scaling
-            function scaleX(siteIndex, jitter = 0.1) {
-                const siteSpacing = plotWidth / (siteNames.length || 1);
-                return margin.left + siteSpacing * (siteIndex + 0.5) + jitter;
+            function scaleX(groupIndex, jitter = 0.1) {
+                const groupSpacing = plotWidth / (groupNames.length || 1);
+                return margin.left + groupSpacing * (groupIndex + 0.5) + jitter;
             }
 
             function scaleY(value) {
@@ -464,9 +519,9 @@
                 svg.appendChild(label);
             }
 
-            // Draw x-axis labels (site names)
-            siteNames.forEach((site, siteIndex) => {
-                const x = scaleX(siteIndex);
+            // Draw x-axis labels (group names)
+            groupNames.forEach((groupName, groupIndex) => {
+                const x = scaleX(groupIndex);
 
                 // Tick line
                 const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
@@ -477,7 +532,7 @@
                 tick.setAttribute('stroke', '#666');
                 svg.appendChild(tick);
 
-                // Site label
+                // Group label
                 const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                 label.setAttribute('x', x);
                 label.setAttribute('y', margin.top + plotHeight + 20);
@@ -485,22 +540,22 @@
                 label.setAttribute('font-family', 'Arial, sans-serif');
                 label.setAttribute('font-size', '12');
                 label.setAttribute('fill', '#666');
-                label.textContent = site;
+                label.textContent = groupName;
                 svg.appendChild(label);
             });
 
             // Draw data points
-            siteNames.forEach((site, siteIndex) => {
-                const siteData = groupedData[site];
-                const color = colors[siteIndex % colors.length];
+            groupNames.forEach((groupName, groupIndex) => {
+                const groupData = groupedData[groupName];
+                const color = colors[groupIndex % colors.length];
 
-                siteData.forEach((point, pointIndex) => {
+                groupData.forEach((point, pointIndex) => {
                     const value = parseFloat(point.value);
                     if (isNaN(value)) return;
 
                     // Add jitter to x position
                     const jitter = (Math.random() - 0.5) * 40; // ±20px jitter
-                    const x = scaleX(siteIndex, jitter);
+                    const x = scaleX(groupIndex, jitter);
                     const y = scaleY(value);
 
                     // Create circle
@@ -516,7 +571,7 @@
 
                     // Add tooltip on hover
                     const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-                    title.textContent = `${site}\nPlot: ${point.plot}\nValue: ${value.toFixed(2)}`;
+                    title.textContent = `${colorBy.charAt(0).toUpperCase() + colorBy.slice(1)}: ${groupName}\nSite: ${point.site}\nSystem: ${point.system}\nPhase: ${point.phase}\nPlot: ${point.plot}\nValue: ${value.toFixed(2)}`;
                     circle.appendChild(title);
 
                     svg.appendChild(circle);
@@ -532,7 +587,7 @@
             title.setAttribute('font-size', '16');
             title.setAttribute('font-weight', 'bold');
             title.setAttribute('fill', '#333');
-            title.textContent = `${selectedVariable} by Field Site`;
+            title.textContent = plotTitle;
             svg.appendChild(title);
 
             // Add subtitle
@@ -543,7 +598,7 @@
             subtitle.setAttribute('font-family', 'Arial, sans-serif');
             subtitle.setAttribute('font-size', '12');
             subtitle.setAttribute('fill', '#666');
-            subtitle.textContent = `System: ${selectedSystem}, Phase: ${selectedPhase}`;
+            subtitle.textContent = plotSubtitle;
             svg.appendChild(subtitle);
 
             // Add axis labels
@@ -565,8 +620,36 @@
             xLabel.setAttribute('font-family', 'Arial, sans-serif');
             xLabel.setAttribute('font-size', '14');
             xLabel.setAttribute('fill', '#333');
-            xLabel.textContent = 'Field Site';
+            xLabel.textContent = xAxisLabel;
             svg.appendChild(xLabel);
+
+            // Add legend
+            const legendStartY = margin.top + 10;
+            const legendItemHeight = 20;
+            groupNames.forEach((groupName, index) => {
+                const color = colors[index % colors.length];
+                const legendY = legendStartY + index * legendItemHeight;
+                
+                // Legend color box
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', svgWidth - margin.right - 100);
+                rect.setAttribute('y', legendY - 8);
+                rect.setAttribute('width', '12');
+                rect.setAttribute('height', '12');
+                rect.setAttribute('fill', color);
+                rect.setAttribute('stroke', color);
+                svg.appendChild(rect);
+                
+                // Legend text
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', svgWidth - margin.right - 80);
+                text.setAttribute('y', legendY);
+                text.setAttribute('font-family', 'Arial, sans-serif');
+                text.setAttribute('font-size', '12');
+                text.setAttribute('fill', '#333');
+                text.textContent = groupName;
+                svg.appendChild(text);
+            });
 
             // Add to container
             plotContainer.appendChild(svg);

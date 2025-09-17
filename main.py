@@ -201,24 +201,47 @@ async def get_plot_data(request: Request, site: str, system: str, phase: str, va
     return templates.TemplateResponse("plot_data.html", {"request": request, "data": data})
 
 @app.get("/api/plot-data-json")
-async def get_plot_data_json(sites: str, system: str = None, phase: str = None, variable: str = None):
-    """API endpoint to get plot data as JSON for plotting"""
+async def get_plot_data_json(variable: str, sites: str = None, system: str = None, phase: str = None):
+    """API endpoint to get plot data as JSON for plotting at any level of selection"""
     df = load_data()
-
-    # Parse multiple sites separated by comma
-    site_list = [s.strip() for s in sites.split(',')]
-
     plot_data = []
+    
+    # If no sites specified, use all sites
+    if not sites:
+        site_list = get_unique_sites(df)
+    else:
+        site_list = [s.strip() for s in sites.split(',')]
+    
     for site in site_list:
         try:
-            plot_ids = get_plot_id_values(df, site, system, phase)
+            # Get plot IDs based on the level of filtering
+            if system and phase:
+                # Site + System + Phase level
+                plot_ids = get_plot_id_values(df, site, system, phase)
+            elif system:
+                # Site + System level
+                plot_ids = get_plot_id_values(df, site, system, None)
+            elif sites:
+                # Site level only
+                plot_ids = get_plot_id_values(df, site, None, None)
+            else:
+                # No filtering - get all plots for this site
+                plot_ids = get_plot_id_values(df, site, None, None)
+            
             if plot_ids:  # Only process if we have plot IDs
                 site_data = get_plotting_data(df, plot_ids, variable)
                 for _, row in site_data.iterrows():
+                    plot_id_parts = row['plot'].split('_')
+                    value = row[variable]
+                    # Skip NaN values
+                    if pd.isna(value):
+                        continue
                     plot_data.append({
-                        'site': site,
+                        'site': plot_id_parts[0],
+                        'system': plot_id_parts[1] if len(plot_id_parts) > 1 else 'Unknown',
+                        'phase': plot_id_parts[2] if len(plot_id_parts) > 2 else 'Unknown',
                         'plot': row['plot'],
-                        'value': row[variable]
+                        'value': float(value)  # Ensure it's a regular float, not numpy float
                     })
         except Exception as e:
             # Skip sites that cause errors (e.g., no matching data)
