@@ -1,4 +1,4 @@
-# Commodity Performance Comparison Dashboard
+# Crop Field Trials Performance Comparison Dashboard
 
 A HTMX frontend dashboard connected to a simple FastAPI backend for comparing crop trial performance data. The backend serves results from two CSV files containing commodity price data and yield/cost analysis.
 
