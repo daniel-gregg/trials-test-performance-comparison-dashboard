@@ -111,3 +111,35 @@ def peas_price_sim(s = 100):
     ]
 
     return rands
+
+
+def oats_price_sim(s = 100):
+    # Oats price distributions are highly non-normal with bimodality and other peak/tail patterns
+    # that are not easily described by a distribution
+    # We use a decile approach with each decile having a uniform distribution and sampling from each of those
+    #  with a probability of 10% (as they are deciles)
+
+    decile_dict = {
+        "0" : 251,
+        "1" : 287,
+        "2" : 298,
+        "3" : 314,
+        "4" : 324,
+        "5" : 340,
+        "6" : 370,
+        "7" : 400,
+        "8" : 440,
+        "9" : 474,
+        "10": 561
+    }
+    # note '0' refers to min and '10' refers to max
+
+    rands = rng(size = s)
+
+    rands = [
+        rng.uniform(low = get_decile_prices_value_from_dict(decile_dict, i)['lower'],
+                    high = get_decile_prices_value_from_dict(decile_dict, i)['upper'])
+        for i in rands
+    ]
+
+    return rands
