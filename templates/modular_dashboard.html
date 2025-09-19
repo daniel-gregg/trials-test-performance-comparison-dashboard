@@ -128,6 +128,15 @@
             display: block;
         }
         
+        /* Tab content areas */
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
         /* Header styles */
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -488,11 +497,15 @@
             });
             componentElement.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
 
-            // Update tab content
+            // Update tab content - hide all first
             componentElement.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
+                content.style.display = 'none';
             });
-            componentElement.querySelector(`#${tabId}-tab`).classList.add('active');
+            // Show the selected tab
+            const targetTab = componentElement.querySelector(`#${tabId}-tab`);
+            if (targetTab) {
+                targetTab.style.display = 'block';
+            }
         }
 
         function updateSelectionSummary() {
