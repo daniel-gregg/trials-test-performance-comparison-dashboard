@@ -33,6 +33,26 @@ This provides a short to-do list for next-stage updates/improvements.
     * The 'cumulative by ID' option means that any duplicate observations are first summed then plotted to provide the cumulative result for each ID over time.
     * The latter is generally more meaningful for these results as we are concerned with cumulative results.
 
+## Prepare the dashboard to allow for integration of more functions/analytics in a modular way
+
+Aims: Re-organise the user interface to allow both for an intuitive UX and to modularise the components the users see in order to increase speed of development and an improved ability to allow for fee-based integrations for users (i.e. they simply pay a fee to access an additional dashboard component and, once paid, this is immediately available to them).
+
+Layout concept:
+* A fixed 'home' or 'options' column on the left hand side
+* A viewing pane that includes tabs for different types of views or components for the selected option
+* viewing pane changes based on the combined selection of options and tabs in the viewport selected
+* Options (left column) should include:
+    * Landing view^ (logo + map)
+    * Options (select target site, system and phase)^
+    * Costs by activity type
+    * Yields and revenues
+    * Gross margin comparisons^
+    * Weather and other events
+    * Measurements (e.g. soil moisture, soil nutrition, grain protein)
+    * Price simulations and system comparisons
+* Note: options with "^" at the end should be available. All others should be present in the options column but not clickable.
+* For the 'options' page use the current options choices involving selection of a site and options to select one or more systems/phases for consideration
+* For the gross margin comparisons use the current plots we are using
 
 ## Integrate a prices simulation tool for comparisons and graph these as cumulative difference graphs to identify FSD and SSD outcomes
 * Requirements:
