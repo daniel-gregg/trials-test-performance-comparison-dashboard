@@ -111,3 +111,173 @@ def peas_price_sim(s = 100):
     ]
 
     return rands
+
+
+def oats_price_sim(s = 100):
+    # Oats price distributions are highly non-normal with bimodality and other peak/tail patterns
+    # that are not easily described by a distribution
+    # We use a decile approach with each decile having a uniform distribution and sampling from each of those
+    #  with a probability of 10% (as they are deciles)
+
+    decile_dict = {
+        "0" : 251,
+        "1" : 287,
+        "2" : 298,
+        "3" : 314,
+        "4" : 324,
+        "5" : 340,
+        "6" : 370,
+        "7" : 400,
+        "8" : 440,
+        "9" : 474,
+        "10": 561
+    }
+    # note '0' refers to min and '10' refers to max
+
+    rands = rng(size = s)
+
+    rands = [
+        rng.uniform(low = get_decile_prices_value_from_dict(decile_dict, i)['lower'],
+                    high = get_decile_prices_value_from_dict(decile_dict, i)['upper'])
+        for i in rands
+    ]
+
+    return rands
+
+
+def lupins_price_sim(s = 100):
+    # Lupins price distributions are highly non-normal with bimodality and other peak/tail patterns
+    # that are not easily described by a distribution
+    # We use a decile approach with each decile having a uniform distribution and sampling from each of those
+    #  with a probability of 10% (as they are deciles)
+
+    decile_dict = {
+        "0" : 232,
+        "1" : 287,
+        "2" : 299,
+        "3" : 324,
+        "4" : 342,
+        "5" : 349,
+        "6" : 358,
+        "7" : 375,
+        "8" : 388,
+        "9" : 448,
+        "10": 591
+    }
+    # note '0' refers to min and '10' refers to max
+
+    rands = rng(size = s)
+
+    rands = [
+        rng.uniform(low = get_decile_prices_value_from_dict(decile_dict, i)['lower'],
+                    high = get_decile_prices_value_from_dict(decile_dict, i)['upper'])
+        for i in rands
+    ]
+
+    return rands
+
+
+def barley_price_sim(s = 100):
+    # Simulate barley prices from normal distribution
+    # Barley prices appear roughly normally distributed but with a censored lower tail at ~$150 AUD (real prices)
+    # see here: https://agprice.sfs.org.au/
+    rands = rng.normal(loc=310, scale=50, size=s)
+    rands[rands < 150] = 150
+
+    return rands
+
+
+def canola_price_sim(s = 100):
+    # Canola price distributions are highly non-normal with bimodality and other peak/tail patterns
+    # that are not easily described by a distribution
+    # We use a decile approach with each decile having a uniform distribution and sampling from each of those
+    #  with a probability of 10% (as they are deciles)
+
+    decile_dict = {
+        "0" : 495,
+        "1" : 540,
+        "2" : 559,
+        "3" : 578,
+        "4" : 599,
+        "5" : 630,
+        "6" : 664,
+        "7" : 700,
+        "8" : 731,
+        "9" : 811,
+        "10": 1134
+    }
+    # note '0' refers to min and '10' refers to max
+
+    rands = rng(size = s)
+
+    rands = [
+        rng.uniform(low = get_decile_prices_value_from_dict(decile_dict, i)['lower'],
+                    high = get_decile_prices_value_from_dict(decile_dict, i)['upper'])
+        for i in rands
+    ]
+
+    return rands
+
+
+def lucerne_price_sim(s = 100):
+    # Lucerne price distributions are highly non-normal with bimodality and other peak/tail patterns
+    # that are not easily described by a distribution
+    # We use a decile approach with each decile having a uniform distribution and sampling from each of those
+    #  with a probability of 10% (as they are deciles)
+
+    decile_dict = {
+        "0" : 198,
+        "1" : 327,
+        "2" : 355,
+        "3" : 373,
+        "4" : 396,
+        "5" : 414,
+        "6" : 449,
+        "7" : 498,
+        "8" : 529,
+        "9" : 621,
+        "10": 805
+    }
+    # note '0' refers to min and '10' refers to max
+
+    rands = rng(size = s)
+
+    rands = [
+        rng.uniform(low = get_decile_prices_value_from_dict(decile_dict, i)['lower'],
+                    high = get_decile_prices_value_from_dict(decile_dict, i)['upper'])
+        for i in rands
+    ]
+
+    return rands
+
+
+def pasture_price_sim(s = 100):
+    # Pasture price distributions are highly non-normal with bimodality and other peak/tail patterns
+    # that are not easily described by a distribution
+    # We use a decile approach with each decile having a uniform distribution and sampling from each of those
+    #  with a probability of 10% (as they are deciles)
+
+    decile_dict = {
+        "0" : 102,
+        "1" : 173,
+        "2" : 190,
+        "3" : 207,
+        "4" : 226,
+        "5" : 243,
+        "6" : 277,
+        "7" : 304,
+        "8" : 342,
+        "9" : 394,
+        "10": 591
+    }
+    # note '0' refers to min and '10' refers to max
+
+    rands = rng(size = s)
+
+    rands = [
+        rng.uniform(low = get_decile_prices_value_from_dict(decile_dict, i)['lower'],
+                    high = get_decile_prices_value_from_dict(decile_dict, i)['upper'])
+        for i in rands
+    ]
+
+    return rands
