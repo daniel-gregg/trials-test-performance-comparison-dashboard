@@ -63,6 +63,18 @@
             background: #ccc;
             cursor: not-allowed;
         }
+        
+        /* Secondary button styles */
+        .btn-secondary {
+            background: #6c757d !important;
+            margin-top: 5px !important;
+        }
+        .btn-secondary:hover {
+            background: #5a6268 !important;
+        }
+        .btn-secondary:disabled {
+            background: #ccc !important;
+        }
 
         /* Header styles */
         .header {
@@ -290,6 +302,8 @@
                 </div>
 
                 <button id="plotBtn" class="btn" disabled>Plot Data</button>
+                
+                <button id="downloadBtn" class="btn btn-secondary" style="display: none;" disabled>Download Data</button>
 
                 <div id="errorMessage" class="error" style="display: none;"></div>
             </div>
@@ -321,6 +335,7 @@
         let selectedSystems = []; // For compare mode
         let selectedPhases = []; // For compare mode
         let aggregationMode = 'byCrop'; // 'byCrop' or 'cumulative'
+        let currentPlotData = null; // Store current plot data for download
 
         // Initialize the dashboard
         document.addEventListener('DOMContentLoaded', function() {
@@ -370,6 +385,8 @@
             });
 
             document.getElementById('plotBtn').addEventListener('click', generatePlot);
+            
+            document.getElementById('downloadBtn').addEventListener('click', downloadData);
 
             // Aggregation toggle event listeners
             document.getElementById('byCropBtn').addEventListener('click', function() {
@@ -601,12 +618,18 @@
                     if (data.error) {
                         showError(data.error);
                         document.getElementById('plotContainer').innerHTML = '<div class="loading">Error: ' + data.error + '</div>';
+                        currentPlotData = null;
+                        hideDownloadButton();
                         return;
                     }
                     
                     if (data.data && data.data.length > 0) {
+                        currentPlotData = data.data; // Store for download
                         createScatterPlot(data.data);
+                        showDownloadButton();
                     } else {
+                        currentPlotData = null;
+                        hideDownloadButton();
                         showError('No data found for the selected parameters');
                         document.getElementById('plotContainer').innerHTML = '<div class="loading">No data available for selected parameters</div>';
                     }
@@ -615,6 +638,8 @@
                     console.error('Error fetching plot data:', error);
                     showError('Failed to fetch plot data');
                     document.getElementById('plotContainer').innerHTML = '<div class="loading">Error loading plot data</div>';
+                    currentPlotData = null;
+                    hideDownloadButton();
                 });
         }
 
@@ -633,18 +658,26 @@
                     if (data.error) {
                         showError(data.error);
                         document.getElementById('plotContainer').innerHTML = '<div class="loading">Error: ' + data.error + '</div>';
+                        currentPlotData = null;
+                        hideDownloadButton();
                         return;
                     }
                     
                     if (data.data && data.data.length > 0) {
                         const filteredData = filterDataForComparison(data.data);
                         if (filteredData.length > 0) {
+                            currentPlotData = filteredData; // Store filtered data for download
                             createBoxPlot(filteredData);
+                            showDownloadButton();
                         } else {
+                            currentPlotData = null;
+                            hideDownloadButton();
                             showError('No data found for the selected comparison');
                             document.getElementById('plotContainer').innerHTML = '<div class="loading">No data available for selected comparison</div>';
                         }
                     } else {
+                        currentPlotData = null;
+                        hideDownloadButton();
                         showError('No data found for the selected parameters');
                         document.getElementById('plotContainer').innerHTML = '<div class="loading">No data available for selected parameters</div>';
                     }
@@ -653,6 +686,8 @@
                     console.error('Error fetching plot data:', error);
                     showError('Failed to fetch plot data');
                     document.getElementById('plotContainer').innerHTML = '<div class="loading">Error loading plot data</div>';
+                    currentPlotData = null;
+                    hideDownloadButton();
                 });
         }
 
@@ -1382,6 +1417,130 @@
         function regeneratePlot() {
             if (plotType === 'compare' && validateCompareMode() && selectedVariable) {
                 generatePlot();
+            }
+        }
+        
+        function showDownloadButton() {
+            const downloadBtn = document.getElementById('downloadBtn');
+            downloadBtn.style.display = 'block';
+            downloadBtn.disabled = false;
+        }
+        
+        function hideDownloadButton() {
+            const downloadBtn = document.getElementById('downloadBtn');
+            downloadBtn.style.display = 'none';
+            downloadBtn.disabled = true;
+        }
+        
+        function downloadData() {
+            if (!currentPlotData || !selectedVariable) {
+                showError('No plot data available for download');
+                return;
+            }
+            
+            try {
+                const csvData = generateCSVFromPlotData(currentPlotData, selectedVariable);
+                const filename = generateDownloadFilename();
+                downloadCSVFile(csvData, filename);
+            } catch (error) {
+                console.error('Error generating CSV:', error);
+                showError('Failed to generate download file');
+            }
+        }
+        
+        function generateCSVFromPlotData(data, variable) {
+            // Group data by system and phase for statistical analysis
+            const groups = {};
+            
+            data.forEach(point => {
+                const key = `${point.site}_${point.system}_${point.phase}`;
+                if (!groups[key]) {
+                    groups[key] = {
+                        site: point.site,
+                        system: point.system,
+                        phase: point.phase,
+                        values: []
+                    };
+                }
+                groups[key].values.push(point.value);
+            });
+            
+            // Calculate statistics for each group
+            const statsData = [];
+            Object.values(groups).forEach(group => {
+                const values = group.values;
+                const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
+                const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
+                const stdDev = Math.sqrt(variance);
+                
+                statsData.push({
+                    site: group.site,
+                    system: group.system,
+                    phase: group.phase,
+                    variable: variable,
+                    count: values.length,
+                    mean: mean.toFixed(4),
+                    std_dev: stdDev.toFixed(4),
+                    min: Math.min(...values).toFixed(4),
+                    max: Math.max(...values).toFixed(4)
+                });
+            });
+            
+            // Generate CSV header
+            let csv = 'Site,System,Phase,Variable,Count,Mean,Standard_Deviation,Minimum,Maximum\\n';
+            
+            // Add data rows
+            statsData.forEach(row => {
+                csv += `"${row.site}","${row.system}","${row.phase}","${row.variable}",${row.count},${row.mean},${row.std_dev},${row.min},${row.max}\\n`;
+            });
+            
+            // Add comparison analysis for compare mode
+            if (plotType === 'compare' && statsData.length >= 2) {
+                csv += '\\n\\nComparison Analysis\\n';
+                csv += 'Group_A,Group_B,Mean_Difference,Statistical_Note\\n';
+                
+                for (let i = 0; i < statsData.length; i++) {
+                    for (let j = i + 1; j < statsData.length; j++) {
+                        const groupA = statsData[i];
+                        const groupB = statsData[j];
+                        const meanDiff = (parseFloat(groupA.mean) - parseFloat(groupB.mean)).toFixed(4);
+                        const groupAName = `${groupA.system}_${groupA.phase}`;
+                        const groupBName = `${groupB.system}_${groupB.phase}`;
+                        csv += `"${groupAName}","${groupBName}",${meanDiff},"Descriptive comparison only"\\n`;
+                    }
+                }
+            }
+            
+            return csv;
+        }
+        
+        function generateDownloadFilename() {
+            const date = new Date().toISOString().split('T')[0];
+            const variableName = selectedVariable.replace(/[^a-zA-Z0-9]/g, '_');
+            let filename = `trials_data_${variableName}_${date}`;
+            
+            if (plotType === 'compare' && selectedSite) {
+                filename += `_${selectedSite}`;
+            }
+            
+            return filename + '.csv';
+        }
+        
+        function downloadCSVFile(csvContent, filename) {
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } else {
+                // Fallback for browsers that don't support download attribute
+                window.open('data:text/csv;charset=utf-8,' + encodeURI(csvContent));
             }
         }
     </script>
