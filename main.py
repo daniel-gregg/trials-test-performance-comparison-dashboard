@@ -27,6 +27,12 @@ templates = Jinja2Templates(directory="templates")
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
     """Serve the main dashboard"""
+    return templates.TemplateResponse("modular_dashboard.html", {"request": request})
+
+# Legacy dashboard route (for testing/comparison)
+@app.get("/legacy", response_class=HTMLResponse)
+async def legacy_dashboard(request: Request):
+    """Serve the legacy dashboard"""
     return templates.TemplateResponse("dashboard.html", {"request": request})
 
 # API endpoints to get unique sites, systems, and phases for dropdown menus
