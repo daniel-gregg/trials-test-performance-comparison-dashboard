@@ -52,7 +52,11 @@ Layout concept:
     * Price simulations and system comparisons
 * Note: options with "^" at the end should be available. All others should be present in the options column but not clickable.
 * For the 'options' page use the current options choices involving selection of a site and options to select one or more systems/phases for consideration
-* For the gross margin comparisons use the current plots we are using
+* For the gross margin comparisons use the current plots we are using and in the format we currently use.
+
+Remember, our aim here is to improve the ability for the developer to add elements over time and enhance the data options presented within the dashboard without changing the overall UX/UI. So we are looking to develop this structure as one that is extendable over time.
+
+One idea for how this should look is provided in the attachment.
 
 ## Integrate a prices simulation tool for comparisons and graph these as cumulative difference graphs to identify FSD and SSD outcomes
 * Requirements:
