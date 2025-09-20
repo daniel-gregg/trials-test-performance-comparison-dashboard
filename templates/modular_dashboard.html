@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trials Test Performance Comparison Dashboard</title>
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <style>
+        /* Modular Layout Styles */
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .modular-layout { display: flex; gap: 20px; min-height: 700px; }
+        
+        /* Left Sidebar Navigation */
+        .sidebar-nav {
+            flex: 0 0 280px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+        
+        .sidebar-nav h3 {
+            margin: 0 0 20px 0;
+            color: #333;
+            font-size: 18px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+        
+        .nav-item {
+            display: block;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            text-decoration: none;
+            color: #555;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .nav-item.available {
+            color: #333;
+            background: #f8f9fa;
+        }
+        
+        .nav-item.available:hover {
+            background: #e9ecef;
+            color: #4CAF50;
+            transform: translateX(4px);
+        }
+        
+        .nav-item.active {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .nav-item.disabled {
+            color: #999;
+            cursor: not-allowed;
+            background: #fafafa;
+        }
+        
+        .nav-item.disabled:after {
+            content: "Coming Soon";
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 11px;
+            background: #ddd;
+            color: #666;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Tab Navigation */
+        .tab-nav {
+            display: flex;
+            border-bottom: 2px solid #f0f0f0;
+            margin-bottom: 20px;
+            gap: 8px;
+        }
+        
+        .tab-btn {
+            padding: 12px 20px;
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            border-radius: 6px 6px 0 0;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .tab-btn:hover {
+            background: #f8f9fa;
+            color: #4CAF50;
+        }
+        
+        .tab-btn.active {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        /* Component Content Areas */
+        .component-content {
+            flex: 1;
+            display: none;
+        }
+        
+        .component-content.active {
+            display: block;
+        }
+        
+        /* Tab content areas */
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Header styles */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .header h1 { margin: 0 0 10px 0; }
+        .header p { margin: 0; color: rgba(255,255,255,0.8); }
+        
+        /* Component-specific styles */
+        .landing-view {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        
+        .landing-logo {
+            width: 150px;
+            height: 150px;
+            margin: 0 auto 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 48px;
+            font-weight: bold;
+        }
+        
+        .map-placeholder {
+            width: 100%;
+            height: 300px;
+            background: #f8f9fa;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 18px;
+            margin-top: 20px;
+        }
+        
+        /* Options component styles */
+        .options-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+        
+        .selection-panel {
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        .form-control {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+        }
+        
+        /* Plot styles for gross margin component */
+        .plot-container {
+            min-height: 500px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            padding: 20px;
+        }
+        
+        .btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .btn:hover { background: #45a049; }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .modular-layout {
+                flex-direction: column;
+            }
+            .sidebar-nav {
+                flex: none;
+                position: static;
+            }
+            .options-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Trials Test Performance Comparison Dashboard</h1>
+            <p>Modular analytics platform for field trial performance analysis</p>
+        </header>
+
+        <div class="modular-layout">
+            <!-- Left Sidebar Navigation -->
+            <nav class="sidebar-nav">
+                <h3>Dashboard Components</h3>
+                <a href="#" class="nav-item available active" data-component="landing">
+                    Landing View
+                </a>
+                <a href="#" class="nav-item available" data-component="options">
+                    Options
+                </a>
+                <a href="#" class="nav-item disabled" data-component="costs">
+                    Costs by Activity Type
+                </a>
+                <a href="#" class="nav-item disabled" data-component="yields">
+                    Yields and Revenues
+                </a>
+                <a href="#" class="nav-item available" data-component="gross-margin">
+                    Gross Margin Comparisons
+                </a>
+                <a href="#" class="nav-item disabled" data-component="weather">
+                    Weather and Events
+                </a>
+                <a href="#" class="nav-item disabled" data-component="measurements">
+                    Measurements
+                </a>
+                <a href="#" class="nav-item disabled" data-component="simulations">
+                    Price Simulations
+                </a>
+            </nav>
+
+            <!-- Main Content Area -->
+            <main class="main-content">
+                <!-- Landing View Component -->
+                <div id="landing-component" class="component-content active">
+                    <div class="tab-nav">
+                        <button class="tab-btn active" data-tab="welcome">Welcome</button>
+                        <button class="tab-btn" data-tab="overview">Overview</button>
+                    </div>
+                    
+                    <div id="welcome-tab" class="tab-content active">
+                        <div class="landing-view">
+                            <div class="landing-logo">T</div>
+                            <h2>Welcome to the Trials Dashboard</h2>
+                            <p>Select a component from the sidebar to access different analytics and tools for field trial performance comparison.</p>
+                            <div class="map-placeholder">
+                                Interactive Map Coming Soon
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="overview-tab" class="tab-content">
+                        <h3>Platform Overview</h3>
+                        <p>This modular dashboard provides comprehensive analytics for field trial performance comparison:</p>
+                        <ul>
+                            <li><strong>Site Selection:</strong> Compare performance across different field sites</li>
+                            <li><strong>System Analysis:</strong> Evaluate different agricultural systems</li>
+                            <li><strong>Phase Tracking:</strong> Monitor crop phases and rotations</li>
+                            <li><strong>Variable Analysis:</strong> Deep dive into specific performance metrics</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Options Component -->
+                <div id="options-component" class="component-content">
+                    <div class="tab-nav">
+                        <button class="tab-btn active" data-tab="selection">Site & System Selection</button>
+                        <button class="tab-btn" data-tab="filters">Advanced Filters</button>
+                    </div>
+                    
+                    <div id="selection-tab" class="tab-content active">
+                        <div class="options-content">
+                            <div class="selection-panel">
+                                <h4>Selection Parameters</h4>
+                                
+                                <div class="form-group">
+                                    <label for="variable">Variable:</label>
+                                    <select id="variable" class="form-control">
+                                        <option value="">Loading variables...</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="site">Field Site:</label>
+                                    <select id="site" class="form-control">
+                                        <option value="">All sites (comparison across all field sites)</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="system">System:</label>
+                                    <select id="system" class="form-control">
+                                        <option value="">All systems (optional filter)</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="phase">Phase:</label>
+                                    <select id="phase" class="form-control">
+                                        <option value="">All phases (optional filter)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="selection-panel">
+                                <h4>Current Selection</h4>
+                                <div id="selection-summary">
+                                    <p><strong>Variable:</strong> <span id="selected-variable">None</span></p>
+                                    <p><strong>Site:</strong> <span id="selected-site">All sites</span></p>
+                                    <p><strong>System:</strong> <span id="selected-system">All systems</span></p>
+                                    <p><strong>Phase:</strong> <span id="selected-phase">All phases</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="filters-tab" class="tab-content">
+                        <h3>Advanced Filtering Options</h3>
+                        <p>Additional filtering capabilities will be available here in future updates.</p>
+                    </div>
+                </div>
+
+                <!-- Gross Margin Comparisons Component -->
+                <div id="gross-margin-component" class="component-content">
+                    <div class="tab-nav">
+                        <button class="tab-btn active" data-tab="plots">Comparison Plots</button>
+                        <button class="tab-btn" data-tab="analysis">Statistical Analysis</button>
+                    </div>
+                    
+                    <div id="plots-tab" class="tab-content active">
+                        <h3>Performance Comparison Plot</h3>
+                        <div class="plot-container" id="plotContainer">
+                            <div style="text-align: center; padding: 40px; color: #666;">
+                                Configure options and click "Generate Plot" to view performance comparisons
+                            </div>
+                        </div>
+                        <button id="plotBtn" class="btn" disabled>Generate Plot</button>
+                    </div>
+                    
+                    <div id="analysis-tab" class="tab-content">
+                        <h3>Statistical Analysis</h3>
+                        <p>Detailed statistical analysis of gross margin comparisons will be available here.</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let selectedVariable = '';
+        let selectedSite = '';
+        let selectedSystem = '';
+        let selectedPhase = '';
+        let currentComponent = 'landing';
+
+        // Component navigation
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize the dashboard
+            loadVariables();
+            loadSites();
+            
+            // Component navigation handlers
+            document.querySelectorAll('.nav-item.available').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (!this.classList.contains('disabled')) {
+                        switchComponent(this.dataset.component);
+                    }
+                });
+            });
+
+            // Tab navigation handlers
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    switchTab(this.dataset.tab, this.closest('.component-content'));
+                });
+            });
+
+            // Form handlers
+            document.getElementById('variable').addEventListener('change', function() {
+                selectedVariable = this.value;
+                updateSelectionSummary();
+                updatePlotButton();
+            });
+
+            document.getElementById('site').addEventListener('change', function() {
+                selectedSite = this.value;
+                updateSelectionSummary();
+                loadSystems();
+            });
+
+            document.getElementById('system').addEventListener('change', function() {
+                selectedSystem = this.value;
+                updateSelectionSummary();
+                loadPhases();
+            });
+
+            document.getElementById('phase').addEventListener('change', function() {
+                selectedPhase = this.value;
+                updateSelectionSummary();
+            });
+
+            // Plot button handler
+            document.getElementById('plotBtn').addEventListener('click', function() {
+                if (selectedVariable) {
+                    generatePlot();
+                }
+            });
+        });
+
+        function switchComponent(componentId) {
+            // Update sidebar navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`[data-component="${componentId}"]`).classList.add('active');
+
+            // Update main content
+            document.querySelectorAll('.component-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`${componentId}-component`).classList.add('active');
+
+            currentComponent = componentId;
+        }
+
+        function switchTab(tabId, componentElement) {
+            // Update tab buttons
+            componentElement.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            componentElement.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+
+            // Update tab content - hide all first
+            componentElement.querySelectorAll('.tab-content').forEach(content => {
+                content.style.display = 'none';
+            });
+            // Show the selected tab
+            const targetTab = componentElement.querySelector(`#${tabId}-tab`);
+            if (targetTab) {
+                targetTab.style.display = 'block';
+            }
+        }
+
+        function updateSelectionSummary() {
+            document.getElementById('selected-variable').textContent = selectedVariable || 'None';
+            document.getElementById('selected-site').textContent = selectedSite || 'All sites';
+            document.getElementById('selected-system').textContent = selectedSystem || 'All systems';
+            document.getElementById('selected-phase').textContent = selectedPhase || 'All phases';
+        }
+
+        function updatePlotButton() {
+            const plotBtn = document.getElementById('plotBtn');
+            if (selectedVariable) {
+                plotBtn.disabled = false;
+            } else {
+                plotBtn.disabled = true;
+            }
+        }
+
+        // API functions (reused from original dashboard)
+        function loadVariables() {
+            fetch('/api/variables-json')
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('variable');
+                    select.innerHTML = '<option value="">Select a variable</option>';
+                    data.variables.forEach(variable => {
+                        const option = document.createElement('option');
+                        option.value = variable;
+                        option.textContent = variable;
+                        select.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading variables:', error);
+                });
+        }
+
+        function loadSites() {
+            fetch('/api/sites-json')
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('site');
+                    select.innerHTML = '<option value="">All sites (comparison across all field sites)</option>';
+                    data.sites.forEach(site => {
+                        const option = document.createElement('option');
+                        option.value = site;
+                        option.textContent = site;
+                        select.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading sites:', error);
+                });
+        }
+
+        function loadSystems() {
+            if (!selectedSite) {
+                document.getElementById('system').innerHTML = '<option value="">All systems (optional filter)</option>';
+                return;
+            }
+
+            fetch(`/api/systems-json?site=${encodeURIComponent(selectedSite)}`)
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('system');
+                    select.innerHTML = '<option value="">All systems (optional filter)</option>';
+                    data.systems.forEach(system => {
+                        const option = document.createElement('option');
+                        option.value = system;
+                        option.textContent = system;
+                        select.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading systems:', error);
+                });
+        }
+
+        function loadPhases() {
+            if (!selectedSite || !selectedSystem) {
+                document.getElementById('phase').innerHTML = '<option value="">All phases (optional filter)</option>';
+                return;
+            }
+
+            fetch(`/api/phases-json?site=${encodeURIComponent(selectedSite)}&system=${encodeURIComponent(selectedSystem)}`)
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('phase');
+                    select.innerHTML = '<option value="">All phases (optional filter)</option>';
+                    data.phases.forEach(phase => {
+                        const option = document.createElement('option');
+                        option.value = phase;
+                        option.textContent = phase;
+                        select.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading phases:', error);
+                });
+        }
+
+        function generatePlot() {
+            const plotContainer = document.getElementById('plotContainer');
+            plotContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;">Loading plot...</div>';
+
+            // Build query parameters
+            let params = new URLSearchParams({
+                variable: selectedVariable
+            });
+            
+            if (selectedSite) params.append('sites', selectedSite);
+            if (selectedSystem) params.append('system', selectedSystem);
+            if (selectedPhase) params.append('phase', selectedPhase);
+
+            fetch(`/api/plot-data-json?${params}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.data && data.data.length > 0) {
+                        createScatterPlot(data.data, selectedVariable);
+                    } else {
+                        plotContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">No data available for the selected criteria.</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading plot data:', error);
+                    plotContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: #d32f2f;">Error loading plot data. Please try again.</div>';
+                });
+        }
+
+        function createScatterPlot(data, variable) {
+            const plotContainer = document.getElementById('plotContainer');
+            plotContainer.innerHTML = '';
+
+            const svgWidth = 800;
+            const svgHeight = 500;
+            const margin = { top: 80, right: 50, bottom: 100, left: 80 };
+            const plotWidth = svgWidth - margin.left - margin.right;
+            const plotHeight = svgHeight - margin.top - margin.bottom;
+
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('width', svgWidth);
+            svg.setAttribute('height', svgHeight);
+            svg.style.border = '1px solid #ddd';
+            svg.style.borderRadius = '4px';
+
+            // Get value range for y-axis
+            const allValues = data.map(d => parseFloat(d.value)).filter(v => !isNaN(v));
+            const minY = Math.min(...allValues);
+            const maxY = Math.max(...allValues);
+            const yPadding = (maxY - minY) * 0.1;
+            const yMin = minY - yPadding;
+            const yMax = maxY + yPadding;
+
+            // Create scales
+            const yScale = (value) => plotHeight - ((value - yMin) / (yMax - yMin)) * plotHeight + margin.top;
+
+            // Group data for coloring
+            const groups = [...new Set(data.map(d => selectedSite ? (selectedSystem ? d.phase : d.system) : d.site))];
+            const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F'];
+
+            // Draw axes
+            const xAxisY = yScale(yMin);
+            const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            xAxis.setAttribute('x1', margin.left);
+            xAxis.setAttribute('y1', xAxisY);
+            xAxis.setAttribute('x2', margin.left + plotWidth);
+            xAxis.setAttribute('y2', xAxisY);
+            xAxis.setAttribute('stroke', '#333');
+            xAxis.setAttribute('stroke-width', '2');
+            svg.appendChild(xAxis);
+
+            const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            yAxis.setAttribute('x1', margin.left);
+            yAxis.setAttribute('y1', margin.top);
+            yAxis.setAttribute('x2', margin.left);
+            yAxis.setAttribute('y2', margin.top + plotHeight);
+            yAxis.setAttribute('stroke', '#333');
+            yAxis.setAttribute('stroke-width', '2');
+            svg.appendChild(yAxis);
+
+            // Plot points
+            data.forEach((d, index) => {
+                const group = selectedSite ? (selectedSystem ? d.phase : d.system) : d.site;
+                const groupIndex = groups.indexOf(group);
+                const color = colors[groupIndex % colors.length];
+                
+                const x = margin.left + (index / (data.length - 1)) * plotWidth;
+                const y = yScale(d.value);
+
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', x);
+                circle.setAttribute('cy', y);
+                circle.setAttribute('r', '5');
+                circle.setAttribute('fill', color);
+                circle.setAttribute('stroke', '#333');
+                circle.setAttribute('stroke-width', '1');
+                svg.appendChild(circle);
+            });
+
+            // Add title
+            const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            title.setAttribute('x', svgWidth / 2);
+            title.setAttribute('y', 30);
+            title.setAttribute('text-anchor', 'middle');
+            title.setAttribute('font-family', 'Arial, sans-serif');
+            title.setAttribute('font-size', '16');
+            title.setAttribute('font-weight', 'bold');
+            title.textContent = `${variable} Performance Comparison`;
+            svg.appendChild(title);
+
+            plotContainer.appendChild(svg);
+        }
+    </script>
+</body>
+</html>
