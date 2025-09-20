@@ -890,6 +890,41 @@
                     const container = document.getElementById('refSystemMultiSelect');
                     container.innerHTML = '';
                     
+                    // Add "All systems" checkbox
+                    const allLabel = document.createElement('label');
+                    allLabel.style.fontWeight = 'bold';
+                    allLabel.style.borderBottom = '1px solid #ddd';
+                    allLabel.style.paddingBottom = '5px';
+                    allLabel.style.marginBottom = '10px';
+                    const allCheckbox = document.createElement('input');
+                    allCheckbox.type = 'checkbox';
+                    allCheckbox.value = 'all_systems';
+                    allCheckbox.addEventListener('change', function() {
+                        const systemCheckboxes = container.querySelectorAll('input[type="checkbox"]:not([value="all_systems"])');
+                        if (this.checked) {
+                            // Select all systems
+                            selectedRefSystems = [];
+                            systemCheckboxes.forEach(cb => {
+                                cb.checked = true;
+                                selectedRefSystems.push(cb.value);
+                            });
+                        } else {
+                            // Deselect all systems
+                            selectedRefSystems = [];
+                            systemCheckboxes.forEach(cb => {
+                                cb.checked = false;
+                            });
+                        }
+                        updateReferenceSummary();
+                        if (refPlotType === 'phases' && selectedRefSystems.length === 1) {
+                            loadRefPhases();
+                        }
+                    });
+                    
+                    allLabel.appendChild(allCheckbox);
+                    allLabel.appendChild(document.createTextNode(' All systems'));
+                    container.appendChild(allLabel);
+                    
                     data.systems.forEach(system => {
                         const label = document.createElement('label');
                         const checkbox = document.createElement('input');
@@ -900,7 +935,17 @@
                                 selectedRefSystems.push(system);
                             } else {
                                 selectedRefSystems = selectedRefSystems.filter(s => s !== system);
+                                // Uncheck "All systems" if any individual system is unchecked
+                                allCheckbox.checked = false;
                             }
+                            
+                            // Check "All systems" if all individual systems are selected
+                            const systemCheckboxes = container.querySelectorAll('input[type="checkbox"]:not([value="all_systems"])');
+                            const checkedSystemCheckboxes = container.querySelectorAll('input[type="checkbox"]:not([value="all_systems"]):checked');
+                            if (systemCheckboxes.length === checkedSystemCheckboxes.length && systemCheckboxes.length > 0) {
+                                allCheckbox.checked = true;
+                            }
+                            
                             updateReferenceSummary();
                             if (refPlotType === 'phases' && selectedRefSystems.length === 1) {
                                 loadRefPhases();
@@ -930,6 +975,38 @@
                     const container = document.getElementById('refPhaseMultiSelect');
                     container.innerHTML = '';
                     
+                    // Add "All phases" checkbox
+                    const allLabel = document.createElement('label');
+                    allLabel.style.fontWeight = 'bold';
+                    allLabel.style.borderBottom = '1px solid #ddd';
+                    allLabel.style.paddingBottom = '5px';
+                    allLabel.style.marginBottom = '10px';
+                    const allCheckbox = document.createElement('input');
+                    allCheckbox.type = 'checkbox';
+                    allCheckbox.value = 'all_phases';
+                    allCheckbox.addEventListener('change', function() {
+                        const phaseCheckboxes = container.querySelectorAll('input[type="checkbox"]:not([value="all_phases"])');
+                        if (this.checked) {
+                            // Select all phases
+                            selectedRefPhases = [];
+                            phaseCheckboxes.forEach(cb => {
+                                cb.checked = true;
+                                selectedRefPhases.push(cb.value);
+                            });
+                        } else {
+                            // Deselect all phases
+                            selectedRefPhases = [];
+                            phaseCheckboxes.forEach(cb => {
+                                cb.checked = false;
+                            });
+                        }
+                        updateReferenceSummary();
+                    });
+                    
+                    allLabel.appendChild(allCheckbox);
+                    allLabel.appendChild(document.createTextNode(' All phases'));
+                    container.appendChild(allLabel);
+                    
                     data.phases.forEach(phase => {
                         const label = document.createElement('label');
                         const checkbox = document.createElement('input');
@@ -940,7 +1017,17 @@
                                 selectedRefPhases.push(phase);
                             } else {
                                 selectedRefPhases = selectedRefPhases.filter(p => p !== phase);
+                                // Uncheck "All phases" if any individual phase is unchecked
+                                allCheckbox.checked = false;
                             }
+                            
+                            // Check "All phases" if all individual phases are selected
+                            const phaseCheckboxes = container.querySelectorAll('input[type="checkbox"]:not([value="all_phases"])');
+                            const checkedPhaseCheckboxes = container.querySelectorAll('input[type="checkbox"]:not([value="all_phases"]):checked');
+                            if (phaseCheckboxes.length === checkedPhaseCheckboxes.length && phaseCheckboxes.length > 0) {
+                                allCheckbox.checked = true;
+                            }
+                            
                             updateReferenceSummary();
                         });
                         
