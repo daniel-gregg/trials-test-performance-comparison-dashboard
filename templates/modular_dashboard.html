@@ -225,6 +225,86 @@
             padding: 20px;
         }
         
+        /* Basic plots specific styles */
+        .basic-plots-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .basic-plot-panel {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .basic-plot-panel h4 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 8px;
+        }
+        
+        /* Plot type toggle styles */
+        .plot-type-toggle {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+        }
+        
+        .toggle-option {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            background: #f8f9fa;
+            transition: all 0.2s ease;
+        }
+        
+        .toggle-option:hover {
+            background: #e9ecef;
+        }
+        
+        .toggle-option input[type="radio"] {
+            display: none;
+        }
+        
+        .toggle-option input[type="radio"]:checked + span {
+            background: #4CAF50;
+            color: white;
+            padding: 8px 12px;
+            margin: -8px -12px;
+            border-radius: 4px;
+        }
+        
+        /* Multi-select styles */
+        .multi-select {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            background: white;
+            min-height: 100px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .multi-select label {
+            display: flex;
+            align-items: center;
+            padding: 5px 0;
+            margin-bottom: 5px;
+            cursor: pointer;
+            font-weight: normal;
+        }
+        
+        .multi-select input[type="checkbox"] {
+            margin-right: 8px;
+        }
+        
         .btn {
             background: #4CAF50;
             color: white;
@@ -272,7 +352,7 @@
                     Landing View
                 </a>
                 <a href="#" class="nav-item available" data-component="options">
-                    Options
+                    Filter plots
                 </a>
                 <a href="#" class="nav-item disabled" data-component="costs">
                     Costs by Activity Type
@@ -326,11 +406,13 @@
                     </div>
                 </div>
 
-                <!-- Options Component -->
+                <!-- Filter plots Component -->
                 <div id="options-component" class="component-content">
                     <div class="tab-nav">
                         <button class="tab-btn active" data-tab="selection">Site & System Selection</button>
                         <button class="tab-btn" data-tab="filters">Advanced Filters</button>
+                        <button class="tab-btn" data-tab="reference">Select reference plots</button>
+                        <button class="tab-btn" data-tab="basic">Basic plots</button>
                     </div>
                     
                     <div id="selection-tab" class="tab-content active">
@@ -383,12 +465,122 @@
                         <h3>Advanced Filtering Options</h3>
                         <p>Additional filtering capabilities will be available here in future updates.</p>
                     </div>
+                    
+                    <div id="reference-tab" class="tab-content">
+                        <h3>Select Reference Plots</h3>
+                        <p>Select plots to use as reference for comparisons. This mimics the original dashboard's comparison functionality.</p>
+                        
+                        <div class="options-content">
+                            <div class="selection-panel">
+                                <h4>Reference Plot Selection</h4>
+                                
+                                <div class="form-group">
+                                    <label for="ref-plot-type">Comparison Type:</label>
+                                    <div class="plot-type-toggle">
+                                        <label class="toggle-option">
+                                            <input type="radio" name="refPlotType" value="systems" checked>
+                                            <span>Compare Systems</span>
+                                        </label>
+                                        <label class="toggle-option">
+                                            <input type="radio" name="refPlotType" value="phases">
+                                            <span>Compare Phases</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="ref-site">Reference Site:</label>
+                                    <select id="ref-site" class="form-control">
+                                        <option value="">Select a site for comparison</option>
+                                    </select>
+                                </div>
+
+                                <div id="ref-systems-group" class="form-group">
+                                    <label>Select Systems to Compare:</label>
+                                    <div id="refSystemMultiSelect" class="multi-select">
+                                        <p>Select a site first</p>
+                                    </div>
+                                </div>
+
+                                <div id="ref-phases-group" class="form-group" style="display: none;">
+                                    <label>Select Phases to Compare:</label>
+                                    <div id="refPhaseMultiSelect" class="multi-select">
+                                        <p>Select a site and system first</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="selection-panel">
+                                <h4>Current Reference Selection</h4>
+                                <div id="reference-summary">
+                                    <p><strong>Site:</strong> <span id="selected-ref-site">None</span></p>
+                                    <p><strong>Comparison Type:</strong> <span id="selected-ref-type">Systems</span></p>
+                                    <p><strong>Selected Items:</strong> <span id="selected-ref-items">None</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="basic-tab" class="tab-content">
+                        <h3>Basic Plots</h3>
+                        <p>Generate basic visualizations with your selected data.</p>
+                        
+                        <div class="form-group">
+                            <label for="basic-variable">Variable for Basic Plots:</label>
+                            <select id="basic-variable" class="form-control">
+                                <option value="">Select a variable</option>
+                            </select>
+                        </div>
+                        
+                        <div class="basic-plots-container">
+                            <div class="basic-plot-panel">
+                                <h4>Panel A: Jitter Plot</h4>
+                                <p>Jitter plot of selected variable by plot</p>
+                                
+                                <div class="form-group">
+                                    <label for="jitter-aggregation">Aggregation:</label>
+                                    <select id="jitter-aggregation" class="form-control">
+                                        <option value="plot">By Plot</option>
+                                        <option value="phase" disabled>By Phase</option>
+                                        <option value="system" disabled>By System</option>
+                                        <option value="site" disabled>By Site</option>
+                                    </select>
+                                </div>
+                                
+                                <button id="generateJitterBtn" class="btn" disabled>Generate Jitter Plot</button>
+                                <div id="jitterPlotContainer" class="plot-container" style="min-height: 300px; margin-top: 10px; background: #f8f9fa;">
+                                    <div style="text-align: center; padding: 40px; color: #666;">Select variable and click "Generate Jitter Plot"</div>
+                                </div>
+                            </div>
+                            
+                            <div class="basic-plot-panel">
+                                <h4>Panel B: Line Plot Over Time</h4>
+                                <p>Line plot of variable over time (year)</p>
+                                
+                                <div class="form-group">
+                                    <label for="line-aggregation">Aggregation:</label>
+                                    <select id="line-aggregation" class="form-control">
+                                        <option value="plot">By Plot</option>
+                                        <option value="phase" disabled>By Phase</option>
+                                        <option value="system" disabled>By System</option>
+                                        <option value="site" disabled>By Site</option>
+                                    </select>
+                                </div>
+                                
+                                <button id="generateLineBtn" class="btn" disabled>Generate Line Plot</button>
+                                <div id="linePlotContainer" class="plot-container" style="min-height: 300px; margin-top: 10px; background: #f8f9fa;">
+                                    <div style="text-align: center; padding: 40px; color: #666;">Select variable and click "Generate Line Plot"</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Gross Margin Comparisons Component -->
                 <div id="gross-margin-component" class="component-content">
                     <div class="tab-nav">
                         <button class="tab-btn active" data-tab="plots">Comparison Plots</button>
+                        <button class="tab-btn" data-tab="comparison">Select comparison sites</button>
                         <button class="tab-btn" data-tab="analysis">Statistical Analysis</button>
                     </div>
                     
@@ -400,6 +592,48 @@
                             </div>
                         </div>
                         <button id="plotBtn" class="btn" disabled>Generate Plot</button>
+                    </div>
+                    
+                    <div id="comparison-tab" class="tab-content">
+                        <h3>Select Comparison Sites</h3>
+                        <p>Select comparison sites and generate box/whisker charts comparing reference sites to selected comparison sites.</p>
+                        
+                        <div class="options-content">
+                            <div class="selection-panel">
+                                <h4>Comparison Site Selection</h4>
+                                
+                                <div class="form-group">
+                                    <label>Select Comparison Sites:</label>
+                                    <div id="comparisonSitesMultiSelect" class="multi-select">
+                                        <p>Loading sites...</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="comparison-variable">Variable for Comparison:</label>
+                                    <select id="comparison-variable" class="form-control">
+                                        <option value="">Select a variable</option>
+                                    </select>
+                                </div>
+                                
+                                <button id="generateComparisonBtn" class="btn" disabled>Generate Box/Whisker Chart</button>
+                            </div>
+                            
+                            <div class="selection-panel">
+                                <h4>Comparison Configuration</h4>
+                                <div id="comparison-config">
+                                    <p><strong>Reference Sites:</strong> <span id="ref-sites-display">Configure in 'Filter plots > Select reference plots'</span></p>
+                                    <p><strong>Comparison Sites:</strong> <span id="comp-sites-display">None selected</span></p>
+                                    <p><strong>Variable:</strong> <span id="comp-variable-display">None</span></p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="plot-container" id="comparisonPlotContainer" style="margin-top: 20px;">
+                            <div style="text-align: center; padding: 40px; color: #666;">
+                                Configure comparison settings and click "Generate Box/Whisker Chart"
+                            </div>
+                        </div>
                     </div>
                     
                     <div id="analysis-tab" class="tab-content">
@@ -418,12 +652,29 @@
         let selectedSystem = '';
         let selectedPhase = '';
         let currentComponent = 'landing';
+        
+        // Reference plots variables
+        let refPlotType = 'systems'; // 'systems' or 'phases'
+        let selectedRefSite = '';
+        let selectedRefSystems = [];
+        let selectedRefPhases = [];
+        
+        // Basic plots variables
+        let basicVariable = '';
+        
+        // Comparison variables
+        let selectedComparisonSites = [];
+        let comparisonVariable = '';
 
         // Component navigation
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize the dashboard
             loadVariables();
             loadSites();
+            loadReferenceSites();
+            loadComparisonSites();
+            loadBasicVariables();
+            loadComparisonVariables();
             
             // Component navigation handlers
             document.querySelectorAll('.nav-item.available').forEach(item => {
@@ -470,6 +721,53 @@
             document.getElementById('plotBtn').addEventListener('click', function() {
                 if (selectedVariable) {
                     generatePlot();
+                }
+            });
+            
+            // Reference plots event handlers
+            document.querySelectorAll('input[name="refPlotType"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    refPlotType = this.value;
+                    updateReferenceControls();
+                    updateReferenceSummary();
+                });
+            });
+            
+            document.getElementById('ref-site').addEventListener('change', function() {
+                selectedRefSite = this.value;
+                loadRefSystems();
+                updateReferenceSummary();
+            });
+            
+            // Basic plots event handlers
+            document.getElementById('basic-variable').addEventListener('change', function() {
+                basicVariable = this.value;
+                updateBasicPlotButtons();
+                updateAggregationOptions();
+            });
+            
+            document.getElementById('generateJitterBtn').addEventListener('click', function() {
+                if (basicVariable) {
+                    generateJitterPlot();
+                }
+            });
+            
+            document.getElementById('generateLineBtn').addEventListener('click', function() {
+                if (basicVariable) {
+                    generateLinePlot();
+                }
+            });
+            
+            // Comparison event handlers
+            document.getElementById('comparison-variable').addEventListener('change', function() {
+                comparisonVariable = this.value;
+                updateComparisonButton();
+                updateComparisonSummary();
+            });
+            
+            document.getElementById('generateComparisonBtn').addEventListener('click', function() {
+                if (comparisonVariable && selectedComparisonSites.length > 0) {
+                    generateComparisonChart();
                 }
             });
         });
@@ -717,6 +1015,534 @@
             svg.appendChild(title);
 
             plotContainer.appendChild(svg);
+        }
+        
+        // New functions for reference plots functionality
+        function loadReferenceSites() {
+            fetch('/api/sites-json')
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('ref-site');
+                    select.innerHTML = '<option value="">Select a site for comparison</option>';
+                    data.sites.forEach(site => {
+                        const option = document.createElement('option');
+                        option.value = site;
+                        option.textContent = site;
+                        select.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading reference sites:', error);
+                });
+        }
+        
+        function loadRefSystems() {
+            if (!selectedRefSite) {
+                document.getElementById('refSystemMultiSelect').innerHTML = '<p>Select a site first</p>';
+                return;
+            }
+
+            fetch(`/api/systems-json?site=${encodeURIComponent(selectedRefSite)}`)
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('refSystemMultiSelect');
+                    container.innerHTML = '';
+                    
+                    data.systems.forEach(system => {
+                        const label = document.createElement('label');
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.value = system;
+                        checkbox.addEventListener('change', function() {
+                            if (this.checked) {
+                                selectedRefSystems.push(system);
+                            } else {
+                                selectedRefSystems = selectedRefSystems.filter(s => s !== system);
+                            }
+                            updateReferenceSummary();
+                            if (refPlotType === 'phases' && selectedRefSystems.length === 1) {
+                                loadRefPhases();
+                            }
+                        });
+                        
+                        label.appendChild(checkbox);
+                        label.appendChild(document.createTextNode(system));
+                        container.appendChild(label);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading reference systems:', error);
+                });
+        }
+        
+        function loadRefPhases() {
+            if (!selectedRefSite || selectedRefSystems.length !== 1) {
+                document.getElementById('refPhaseMultiSelect').innerHTML = '<p>Select a site and one system first</p>';
+                return;
+            }
+
+            const system = selectedRefSystems[0];
+            fetch(`/api/phases-json?site=${encodeURIComponent(selectedRefSite)}&system=${encodeURIComponent(system)}`)
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('refPhaseMultiSelect');
+                    container.innerHTML = '';
+                    
+                    data.phases.forEach(phase => {
+                        const label = document.createElement('label');
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.value = phase;
+                        checkbox.addEventListener('change', function() {
+                            if (this.checked) {
+                                selectedRefPhases.push(phase);
+                            } else {
+                                selectedRefPhases = selectedRefPhases.filter(p => p !== phase);
+                            }
+                            updateReferenceSummary();
+                        });
+                        
+                        label.appendChild(checkbox);
+                        label.appendChild(document.createTextNode(phase));
+                        container.appendChild(label);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading reference phases:', error);
+                });
+        }
+        
+        function updateReferenceControls() {
+            const systemsGroup = document.getElementById('ref-systems-group');
+            const phasesGroup = document.getElementById('ref-phases-group');
+            
+            if (refPlotType === 'systems') {
+                systemsGroup.style.display = 'block';
+                phasesGroup.style.display = 'none';
+                selectedRefPhases = [];
+            } else {
+                systemsGroup.style.display = 'block';
+                phasesGroup.style.display = 'block';
+            }
+        }
+        
+        function updateReferenceSummary() {
+            document.getElementById('selected-ref-site').textContent = selectedRefSite || 'None';
+            document.getElementById('selected-ref-type').textContent = refPlotType === 'systems' ? 'Systems' : 'Phases';
+            
+            let items = [];
+            if (refPlotType === 'systems') {
+                items = selectedRefSystems;
+            } else {
+                items = selectedRefPhases;
+            }
+            document.getElementById('selected-ref-items').textContent = items.length > 0 ? items.join(', ') : 'None';
+        }
+        
+        // Basic plots functionality
+        function loadBasicVariables() {
+            fetch('/api/variables-json')
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('basic-variable');
+                    select.innerHTML = '<option value="">Select a variable</option>';
+                    data.variables.forEach(variable => {
+                        const option = document.createElement('option');
+                        option.value = variable;
+                        option.textContent = variable;
+                        select.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading basic variables:', error);
+                });
+        }
+        
+        function updateBasicPlotButtons() {
+            const jitterBtn = document.getElementById('generateJitterBtn');
+            const lineBtn = document.getElementById('generateLineBtn');
+            
+            if (basicVariable) {
+                jitterBtn.disabled = false;
+                lineBtn.disabled = false;
+            } else {
+                jitterBtn.disabled = true;
+                lineBtn.disabled = true;
+            }
+        }
+        
+        function updateAggregationOptions() {
+            const jitterAgg = document.getElementById('jitter-aggregation');
+            const lineAgg = document.getElementById('line-aggregation');
+            
+            // Enable higher-level aggregations based on selected filters
+            [jitterAgg, lineAgg].forEach(select => {
+                const options = select.querySelectorAll('option');
+                options.forEach(option => {
+                    if (option.value === 'phase') {
+                        option.disabled = !selectedPhase && !selectedSystem;
+                    } else if (option.value === 'system') {
+                        option.disabled = !selectedSystem;
+                    } else if (option.value === 'site') {
+                        option.disabled = !selectedSite;
+                    }
+                });
+            });
+        }
+        
+        function generateJitterPlot() {
+            const container = document.getElementById('jitterPlotContainer');
+            const aggregation = document.getElementById('jitter-aggregation').value;
+            container.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;">Loading jitter plot...</div>';
+            
+            // Build query parameters
+            let params = new URLSearchParams({
+                variable: basicVariable,
+                plot_type: 'jitter',
+                aggregation: aggregation
+            });
+            
+            if (selectedSite) params.append('sites', selectedSite);
+            if (selectedSystem) params.append('system', selectedSystem);
+            if (selectedPhase) params.append('phase', selectedPhase);
+
+            fetch(`/api/plot-data-json?${params}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.data && data.data.length > 0) {
+                        createJitterPlot(data.data, basicVariable, aggregation);
+                    } else {
+                        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">No data available for jitter plot.</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading jitter plot data:', error);
+                    container.innerHTML = '<div style="text-align: center; padding: 40px; color: #d32f2f;">Error loading jitter plot data.</div>';
+                });
+        }
+        
+        function generateLinePlot() {
+            const container = document.getElementById('linePlotContainer');
+            const aggregation = document.getElementById('line-aggregation').value;
+            container.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;">Loading line plot...</div>';
+            
+            // Build query parameters
+            let params = new URLSearchParams({
+                variable: basicVariable,
+                plot_type: 'line',
+                aggregation: aggregation
+            });
+            
+            if (selectedSite) params.append('sites', selectedSite);
+            if (selectedSystem) params.append('system', selectedSystem);
+            if (selectedPhase) params.append('phase', selectedPhase);
+
+            fetch(`/api/plot-data-json?${params}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.data && data.data.length > 0) {
+                        createLinePlot(data.data, basicVariable, aggregation);
+                    } else {
+                        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">No data available for line plot.</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading line plot data:', error);
+                    container.innerHTML = '<div style="text-align: center; padding: 40px; color: #d32f2f;">Error loading line plot data.</div>';
+                });
+        }
+        
+        function createJitterPlot(data, variable, aggregation) {
+            const container = document.getElementById('jitterPlotContainer');
+            container.innerHTML = '';
+            
+            // Simple jitter plot implementation
+            const svgWidth = 600;
+            const svgHeight = 300;
+            const margin = { top: 60, right: 40, bottom: 80, left: 60 };
+            const plotWidth = svgWidth - margin.left - margin.right;
+            const plotHeight = svgHeight - margin.top - margin.bottom;
+
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('width', svgWidth);
+            svg.setAttribute('height', svgHeight);
+            svg.style.border = '1px solid #ddd';
+            svg.style.borderRadius = '4px';
+
+            // Get value range
+            const allValues = data.map(d => parseFloat(d.value)).filter(v => !isNaN(v));
+            const minY = Math.min(...allValues);
+            const maxY = Math.max(...allValues);
+            const yPadding = (maxY - minY) * 0.1;
+            const yMin = minY - yPadding;
+            const yMax = maxY + yPadding;
+
+            // Create scales
+            const yScale = (value) => plotHeight - ((value - yMin) / (yMax - yMin)) * plotHeight + margin.top;
+
+            // Draw axes
+            const xAxisY = yScale(yMin);
+            const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            xAxis.setAttribute('x1', margin.left);
+            xAxis.setAttribute('y1', xAxisY);
+            xAxis.setAttribute('x2', margin.left + plotWidth);
+            xAxis.setAttribute('y2', xAxisY);
+            xAxis.setAttribute('stroke', '#333');
+            xAxis.setAttribute('stroke-width', '2');
+            svg.appendChild(xAxis);
+
+            const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            yAxis.setAttribute('x1', margin.left);
+            yAxis.setAttribute('y1', margin.top);
+            yAxis.setAttribute('x2', margin.left);
+            yAxis.setAttribute('y2', margin.top + plotHeight);
+            yAxis.setAttribute('stroke', '#333');
+            yAxis.setAttribute('stroke-width', '2');
+            svg.appendChild(yAxis);
+
+            // Plot points with jitter
+            data.forEach((d, index) => {
+                const x = margin.left + (index / (data.length - 1)) * plotWidth + (Math.random() - 0.5) * 20; // Add jitter
+                const y = yScale(d.value);
+
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', x);
+                circle.setAttribute('cy', y);
+                circle.setAttribute('r', '4');
+                circle.setAttribute('fill', '#4CAF50');
+                circle.setAttribute('stroke', '#333');
+                circle.setAttribute('stroke-width', '1');
+                circle.setAttribute('opacity', '0.7');
+                svg.appendChild(circle);
+            });
+
+            // Add title
+            const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            title.setAttribute('x', svgWidth / 2);
+            title.setAttribute('y', 25);
+            title.setAttribute('text-anchor', 'middle');
+            title.setAttribute('font-family', 'Arial, sans-serif');
+            title.setAttribute('font-size', '14');
+            title.setAttribute('font-weight', 'bold');
+            title.textContent = `${variable} Jitter Plot (${aggregation})`;
+            svg.appendChild(title);
+
+            container.appendChild(svg);
+        }
+        
+        function createLinePlot(data, variable, aggregation) {
+            const container = document.getElementById('linePlotContainer');
+            container.innerHTML = '';
+            
+            // Group data by year if year column exists
+            const yearData = {};
+            data.forEach(d => {
+                const year = d.year || '2023'; // fallback year
+                if (!yearData[year]) {
+                    yearData[year] = [];
+                }
+                yearData[year].push(parseFloat(d.value));
+            });
+            
+            // Calculate averages by year
+            const lineData = Object.keys(yearData).map(year => ({
+                year: parseInt(year),
+                value: yearData[year].reduce((a, b) => a + b, 0) / yearData[year].length
+            })).sort((a, b) => a.year - b.year);
+            
+            if (lineData.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">No year data available for line plot.</div>';
+                return;
+            }
+            
+            // Simple line plot implementation
+            const svgWidth = 600;
+            const svgHeight = 300;
+            const margin = { top: 60, right: 40, bottom: 80, left: 60 };
+            const plotWidth = svgWidth - margin.left - margin.right;
+            const plotHeight = svgHeight - margin.top - margin.bottom;
+
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('width', svgWidth);
+            svg.setAttribute('height', svgHeight);
+            svg.style.border = '1px solid #ddd';
+            svg.style.borderRadius = '4px';
+
+            // Get ranges
+            const minYear = Math.min(...lineData.map(d => d.year));
+            const maxYear = Math.max(...lineData.map(d => d.year));
+            const minY = Math.min(...lineData.map(d => d.value));
+            const maxY = Math.max(...lineData.map(d => d.value));
+            const yPadding = (maxY - minY) * 0.1;
+            const yMin = minY - yPadding;
+            const yMax = maxY + yPadding;
+
+            // Create scales
+            const xScale = (year) => margin.left + ((year - minYear) / (maxYear - minYear)) * plotWidth;
+            const yScale = (value) => plotHeight - ((value - yMin) / (yMax - yMin)) * plotHeight + margin.top;
+
+            // Draw axes
+            const xAxisY = yScale(yMin);
+            const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            xAxis.setAttribute('x1', margin.left);
+            xAxis.setAttribute('y1', xAxisY);
+            xAxis.setAttribute('x2', margin.left + plotWidth);
+            xAxis.setAttribute('y2', xAxisY);
+            xAxis.setAttribute('stroke', '#333');
+            xAxis.setAttribute('stroke-width', '2');
+            svg.appendChild(xAxis);
+
+            const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            yAxis.setAttribute('x1', margin.left);
+            yAxis.setAttribute('y1', margin.top);
+            yAxis.setAttribute('x2', margin.left);
+            yAxis.setAttribute('y2', margin.top + plotHeight);
+            yAxis.setAttribute('stroke', '#333');
+            yAxis.setAttribute('stroke-width', '2');
+            svg.appendChild(yAxis);
+
+            // Draw line
+            let pathData = '';
+            lineData.forEach((d, index) => {
+                const x = xScale(d.year);
+                const y = yScale(d.value);
+                if (index === 0) {
+                    pathData += `M ${x} ${y}`;
+                } else {
+                    pathData += ` L ${x} ${y}`;
+                }
+            });
+
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('d', pathData);
+            path.setAttribute('stroke', '#4CAF50');
+            path.setAttribute('stroke-width', '2');
+            path.setAttribute('fill', 'none');
+            svg.appendChild(path);
+
+            // Add points
+            lineData.forEach(d => {
+                const x = xScale(d.year);
+                const y = yScale(d.value);
+
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', x);
+                circle.setAttribute('cy', y);
+                circle.setAttribute('r', '4');
+                circle.setAttribute('fill', '#4CAF50');
+                circle.setAttribute('stroke', '#333');
+                circle.setAttribute('stroke-width', '1');
+                svg.appendChild(circle);
+            });
+
+            // Add title
+            const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            title.setAttribute('x', svgWidth / 2);
+            title.setAttribute('y', 25);
+            title.setAttribute('text-anchor', 'middle');
+            title.setAttribute('font-family', 'Arial, sans-serif');
+            title.setAttribute('font-size', '14');
+            title.setAttribute('font-weight', 'bold');
+            title.textContent = `${variable} Over Time (${aggregation})`;
+            svg.appendChild(title);
+
+            container.appendChild(svg);
+        }
+        
+        // Comparison sites functionality
+        function loadComparisonSites() {
+            fetch('/api/sites-json')
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('comparisonSitesMultiSelect');
+                    container.innerHTML = '';
+                    
+                    data.sites.forEach(site => {
+                        const label = document.createElement('label');
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.value = site;
+                        checkbox.addEventListener('change', function() {
+                            if (this.checked) {
+                                selectedComparisonSites.push(site);
+                            } else {
+                                selectedComparisonSites = selectedComparisonSites.filter(s => s !== site);
+                            }
+                            updateComparisonButton();
+                            updateComparisonSummary();
+                        });
+                        
+                        label.appendChild(checkbox);
+                        label.appendChild(document.createTextNode(site));
+                        container.appendChild(label);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading comparison sites:', error);
+                });
+        }
+        
+        function loadComparisonVariables() {
+            fetch('/api/variables-json')
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('comparison-variable');
+                    select.innerHTML = '<option value="">Select a variable</option>';
+                    data.variables.forEach(variable => {
+                        const option = document.createElement('option');
+                        option.value = variable;
+                        option.textContent = variable;
+                        select.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading comparison variables:', error);
+                });
+        }
+        
+        function updateComparisonButton() {
+            const btn = document.getElementById('generateComparisonBtn');
+            if (comparisonVariable && selectedComparisonSites.length > 0) {
+                btn.disabled = false;
+            } else {
+                btn.disabled = true;
+            }
+        }
+        
+        function updateComparisonSummary() {
+            document.getElementById('comp-sites-display').textContent = 
+                selectedComparisonSites.length > 0 ? selectedComparisonSites.join(', ') : 'None selected';
+            document.getElementById('comp-variable-display').textContent = comparisonVariable || 'None';
+            
+            // Update reference sites display based on reference selection
+            let refDisplay = 'None configured';
+            if (selectedRefSite) {
+                refDisplay = selectedRefSite;
+                if (refPlotType === 'systems' && selectedRefSystems.length > 0) {
+                    refDisplay += ' (' + selectedRefSystems.join(', ') + ')';
+                } else if (refPlotType === 'phases' && selectedRefPhases.length > 0) {
+                    refDisplay += ' (' + selectedRefPhases.join(', ') + ')';
+                }
+            }
+            document.getElementById('ref-sites-display').textContent = refDisplay;
+        }
+        
+        function generateComparisonChart() {
+            const container = document.getElementById('comparisonPlotContainer');
+            container.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;">Loading comparison chart...</div>';
+            
+            // For now, show a placeholder
+            container.innerHTML = `
+                <div style="text-align: center; padding: 40px;">
+                    <h4>Box/Whisker Comparison Chart</h4>
+                    <p><strong>Variable:</strong> ${comparisonVariable}</p>
+                    <p><strong>Reference:</strong> ${selectedRefSite} (${refPlotType === 'systems' ? selectedRefSystems.join(', ') : selectedRefPhases.join(', ')})</p>
+                    <p><strong>Comparison Sites:</strong> ${selectedComparisonSites.join(', ')}</p>
+                    <div style="border: 2px dashed #ccc; padding: 60px; margin: 20px 0; background: #f9f9f9;">
+                        Box/Whisker Chart Implementation Coming Soon
+                    </div>
+                </div>
+            `;
         }
     </script>
 </body>
