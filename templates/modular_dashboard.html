@@ -354,6 +354,9 @@
                 <a href="#" class="nav-item available" data-component="options">
                     Filter plots
                 </a>
+                <a href="#" class="nav-item available" data-component="basic-plots">
+                    Basic Plots
+                </a>
                 <a href="#" class="nav-item disabled" data-component="costs">
                     Costs by Activity Type
                 </a>
@@ -409,66 +412,13 @@
                 <!-- Filter plots Component -->
                 <div id="options-component" class="component-content">
                     <div class="tab-nav">
-                        <button class="tab-btn active" data-tab="selection">Site & System Selection</button>
+                        <button class="tab-btn active" data-tab="selection">Select Reference Plots</button>
                         <button class="tab-btn" data-tab="filters">Advanced Filters</button>
-                        <button class="tab-btn" data-tab="reference">Select reference plots</button>
-                        <button class="tab-btn" data-tab="basic">Basic plots</button>
                     </div>
                     
                     <div id="selection-tab" class="tab-content active">
-                        <div class="options-content">
-                            <div class="selection-panel">
-                                <h4>Selection Parameters</h4>
-                                
-                                <div class="form-group">
-                                    <label for="variable">Variable:</label>
-                                    <select id="variable" class="form-control">
-                                        <option value="">Loading variables...</option>
-                                    </select>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="site">Field Site:</label>
-                                    <select id="site" class="form-control">
-                                        <option value="">All sites (comparison across all field sites)</option>
-                                    </select>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="system">System:</label>
-                                    <select id="system" class="form-control">
-                                        <option value="">All systems (optional filter)</option>
-                                    </select>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="phase">Phase:</label>
-                                    <select id="phase" class="form-control">
-                                        <option value="">All phases (optional filter)</option>
-                                    </select>
-                                </div>
-                            </div>
-                            
-                            <div class="selection-panel">
-                                <h4>Current Selection</h4>
-                                <div id="selection-summary">
-                                    <p><strong>Variable:</strong> <span id="selected-variable">None</span></p>
-                                    <p><strong>Site:</strong> <span id="selected-site">All sites</span></p>
-                                    <p><strong>System:</strong> <span id="selected-system">All systems</span></p>
-                                    <p><strong>Phase:</strong> <span id="selected-phase">All phases</span></p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div id="filters-tab" class="tab-content">
-                        <h3>Advanced Filtering Options</h3>
-                        <p>Additional filtering capabilities will be available here in future updates.</p>
-                    </div>
-                    
-                    <div id="reference-tab" class="tab-content">
                         <h3>Select Reference Plots</h3>
-                        <p>Select plots to use as reference for comparisons. This mimics the original dashboard's comparison functionality.</p>
+                        <p>Select plots to use as reference for comparisons. Choose a site and comparison type, then select specific systems or phases to compare.</p>
                         
                         <div class="options-content">
                             <div class="selection-panel">
@@ -521,56 +471,79 @@
                         </div>
                     </div>
                     
-                    <div id="basic-tab" class="tab-content">
-                        <h3>Basic Plots</h3>
-                        <p>Generate basic visualizations with your selected data.</p>
+                    <div id="filters-tab" class="tab-content">
+                        <h3>Advanced Filtering Options</h3>
+                        <p>Additional filtering capabilities will be available here in future updates.</p>
+                    </div>
+                </div>
+
+                <!-- Basic Plots Component -->
+                <div id="basic-plots-component" class="component-content">
+                    <div class="tab-nav">
+                        <button class="tab-btn active" data-tab="jitter">Jitter Plots</button>
+                        <button class="tab-btn" data-tab="line">Line Plots</button>
+                    </div>
+                    
+                    <div id="jitter-tab" class="tab-content active">
+                        <h3>Jitter Plots</h3>
+                        <p>Generate jitter plots to visualize data distribution by individual plots.</p>
                         
                         <div class="form-group">
-                            <label for="basic-variable">Variable for Basic Plots:</label>
-                            <select id="basic-variable" class="form-control">
+                            <label for="basic-variable-jitter">Variable for Jitter Plot:</label>
+                            <select id="basic-variable-jitter" class="form-control">
                                 <option value="">Select a variable</option>
                             </select>
                         </div>
                         
-                        <div class="basic-plots-container">
-                            <div class="basic-plot-panel">
-                                <h4>Panel A: Jitter Plot</h4>
-                                <p>Jitter plot of selected variable by plot</p>
-                                
-                                <div class="form-group">
-                                    <label for="jitter-aggregation">Aggregation:</label>
-                                    <select id="jitter-aggregation" class="form-control">
-                                        <option value="plot">By Plot</option>
-                                        <option value="phase" disabled>By Phase</option>
-                                        <option value="system" disabled>By System</option>
-                                        <option value="site" disabled>By Site</option>
-                                    </select>
-                                </div>
-                                
-                                <button id="generateJitterBtn" class="btn" disabled>Generate Jitter Plot</button>
-                                <div id="jitterPlotContainer" class="plot-container" style="min-height: 300px; margin-top: 10px; background: #f8f9fa;">
-                                    <div style="text-align: center; padding: 40px; color: #666;">Select variable and click "Generate Jitter Plot"</div>
-                                </div>
+                        <div class="basic-plot-panel">
+                            <h4>Jitter Plot Configuration</h4>
+                            <p>Jitter plot of selected variable by plot</p>
+                            
+                            <div class="form-group">
+                                <label for="jitter-aggregation">Aggregation:</label>
+                                <select id="jitter-aggregation" class="form-control">
+                                    <option value="plot">By Plot</option>
+                                    <option value="phase" disabled>By Phase</option>
+                                    <option value="system" disabled>By System</option>
+                                    <option value="site" disabled>By Site</option>
+                                </select>
                             </div>
                             
-                            <div class="basic-plot-panel">
-                                <h4>Panel B: Line Plot Over Time</h4>
-                                <p>Line plot of variable over time (year)</p>
-                                
-                                <div class="form-group">
-                                    <label for="line-aggregation">Aggregation:</label>
-                                    <select id="line-aggregation" class="form-control">
-                                        <option value="plot">By Plot</option>
-                                        <option value="phase" disabled>By Phase</option>
-                                        <option value="system" disabled>By System</option>
-                                        <option value="site" disabled>By Site</option>
-                                    </select>
-                                </div>
-                                
-                                <button id="generateLineBtn" class="btn" disabled>Generate Line Plot</button>
-                                <div id="linePlotContainer" class="plot-container" style="min-height: 300px; margin-top: 10px; background: #f8f9fa;">
-                                    <div style="text-align: center; padding: 40px; color: #666;">Select variable and click "Generate Line Plot"</div>
-                                </div>
+                            <button id="generateJitterBtn" class="btn" disabled>Generate Jitter Plot</button>
+                            <div id="jitterPlotContainer" class="plot-container" style="min-height: 400px; margin-top: 10px; background: #f8f9fa;">
+                                <div style="text-align: center; padding: 40px; color: #666;">Select variable and click "Generate Jitter Plot"</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="line-tab" class="tab-content">
+                        <h3>Line Plots</h3>
+                        <p>Generate line plots to visualize trends over time (year).</p>
+                        
+                        <div class="form-group">
+                            <label for="basic-variable-line">Variable for Line Plot:</label>
+                            <select id="basic-variable-line" class="form-control">
+                                <option value="">Select a variable</option>
+                            </select>
+                        </div>
+                        
+                        <div class="basic-plot-panel">
+                            <h4>Line Plot Configuration</h4>
+                            <p>Line plot of variable over time (year)</p>
+                            
+                            <div class="form-group">
+                                <label for="line-aggregation">Aggregation:</label>
+                                <select id="line-aggregation" class="form-control">
+                                    <option value="plot">By Plot</option>
+                                    <option value="phase" disabled>By Phase</option>
+                                    <option value="system" disabled>By System</option>
+                                    <option value="site" disabled>By Site</option>
+                                </select>
+                            </div>
+                            
+                            <button id="generateLineBtn" class="btn" disabled>Generate Line Plot</button>
+                            <div id="linePlotContainer" class="plot-container" style="min-height: 400px; margin-top: 10px; background: #f8f9fa;">
+                                <div style="text-align: center; padding: 40px; color: #666;">Select variable and click "Generate Line Plot"</div>
                             </div>
                         </div>
                     </div>
@@ -647,10 +620,6 @@
 
     <script>
         // Global variables
-        let selectedVariable = '';
-        let selectedSite = '';
-        let selectedSystem = '';
-        let selectedPhase = '';
         let currentComponent = 'landing';
         
         // Reference plots variables
@@ -660,7 +629,8 @@
         let selectedRefPhases = [];
         
         // Basic plots variables
-        let basicVariable = '';
+        let basicVariableJitter = '';
+        let basicVariableLine = '';
         
         // Comparison variables
         let selectedComparisonSites = [];
@@ -669,8 +639,6 @@
         // Component navigation
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize the dashboard
-            loadVariables();
-            loadSites();
             loadReferenceSites();
             loadComparisonSites();
             loadBasicVariables();
@@ -693,37 +661,6 @@
                 });
             });
 
-            // Form handlers
-            document.getElementById('variable').addEventListener('change', function() {
-                selectedVariable = this.value;
-                updateSelectionSummary();
-                updatePlotButton();
-            });
-
-            document.getElementById('site').addEventListener('change', function() {
-                selectedSite = this.value;
-                updateSelectionSummary();
-                loadSystems();
-            });
-
-            document.getElementById('system').addEventListener('change', function() {
-                selectedSystem = this.value;
-                updateSelectionSummary();
-                loadPhases();
-            });
-
-            document.getElementById('phase').addEventListener('change', function() {
-                selectedPhase = this.value;
-                updateSelectionSummary();
-            });
-
-            // Plot button handler
-            document.getElementById('plotBtn').addEventListener('click', function() {
-                if (selectedVariable) {
-                    generatePlot();
-                }
-            });
-            
             // Reference plots event handlers
             document.querySelectorAll('input[name="refPlotType"]').forEach(radio => {
                 radio.addEventListener('change', function() {
@@ -740,20 +677,24 @@
             });
             
             // Basic plots event handlers
-            document.getElementById('basic-variable').addEventListener('change', function() {
-                basicVariable = this.value;
-                updateBasicPlotButtons();
-                updateAggregationOptions();
+            document.getElementById('basic-variable-jitter').addEventListener('change', function() {
+                basicVariableJitter = this.value;
+                updateJitterPlotButton();
+            });
+            
+            document.getElementById('basic-variable-line').addEventListener('change', function() {
+                basicVariableLine = this.value;
+                updateLinePlotButton();
             });
             
             document.getElementById('generateJitterBtn').addEventListener('click', function() {
-                if (basicVariable) {
+                if (basicVariableJitter) {
                     generateJitterPlot();
                 }
             });
             
             document.getElementById('generateLineBtn').addEventListener('click', function() {
-                if (basicVariable) {
+                if (basicVariableLine) {
                     generateLinePlot();
                 }
             });
@@ -804,105 +745,6 @@
             if (targetTab) {
                 targetTab.style.display = 'block';
             }
-        }
-
-        function updateSelectionSummary() {
-            document.getElementById('selected-variable').textContent = selectedVariable || 'None';
-            document.getElementById('selected-site').textContent = selectedSite || 'All sites';
-            document.getElementById('selected-system').textContent = selectedSystem || 'All systems';
-            document.getElementById('selected-phase').textContent = selectedPhase || 'All phases';
-        }
-
-        function updatePlotButton() {
-            const plotBtn = document.getElementById('plotBtn');
-            if (selectedVariable) {
-                plotBtn.disabled = false;
-            } else {
-                plotBtn.disabled = true;
-            }
-        }
-
-        // API functions (reused from original dashboard)
-        function loadVariables() {
-            fetch('/api/variables-json')
-                .then(response => response.json())
-                .then(data => {
-                    const select = document.getElementById('variable');
-                    select.innerHTML = '<option value="">Select a variable</option>';
-                    data.variables.forEach(variable => {
-                        const option = document.createElement('option');
-                        option.value = variable;
-                        option.textContent = variable;
-                        select.appendChild(option);
-                    });
-                })
-                .catch(error => {
-                    console.error('Error loading variables:', error);
-                });
-        }
-
-        function loadSites() {
-            fetch('/api/sites-json')
-                .then(response => response.json())
-                .then(data => {
-                    const select = document.getElementById('site');
-                    select.innerHTML = '<option value="">All sites (comparison across all field sites)</option>';
-                    data.sites.forEach(site => {
-                        const option = document.createElement('option');
-                        option.value = site;
-                        option.textContent = site;
-                        select.appendChild(option);
-                    });
-                })
-                .catch(error => {
-                    console.error('Error loading sites:', error);
-                });
-        }
-
-        function loadSystems() {
-            if (!selectedSite) {
-                document.getElementById('system').innerHTML = '<option value="">All systems (optional filter)</option>';
-                return;
-            }
-
-            fetch(`/api/systems-json?site=${encodeURIComponent(selectedSite)}`)
-                .then(response => response.json())
-                .then(data => {
-                    const select = document.getElementById('system');
-                    select.innerHTML = '<option value="">All systems (optional filter)</option>';
-                    data.systems.forEach(system => {
-                        const option = document.createElement('option');
-                        option.value = system;
-                        option.textContent = system;
-                        select.appendChild(option);
-                    });
-                })
-                .catch(error => {
-                    console.error('Error loading systems:', error);
-                });
-        }
-
-        function loadPhases() {
-            if (!selectedSite || !selectedSystem) {
-                document.getElementById('phase').innerHTML = '<option value="">All phases (optional filter)</option>';
-                return;
-            }
-
-            fetch(`/api/phases-json?site=${encodeURIComponent(selectedSite)}&system=${encodeURIComponent(selectedSystem)}`)
-                .then(response => response.json())
-                .then(data => {
-                    const select = document.getElementById('phase');
-                    select.innerHTML = '<option value="">All phases (optional filter)</option>';
-                    data.phases.forEach(phase => {
-                        const option = document.createElement('option');
-                        option.value = phase;
-                        option.textContent = phase;
-                        select.appendChild(option);
-                    });
-                })
-                .catch(error => {
-                    console.error('Error loading phases:', error);
-                });
         }
 
         function generatePlot() {
@@ -1144,13 +986,24 @@
             fetch('/api/variables-json')
                 .then(response => response.json())
                 .then(data => {
-                    const select = document.getElementById('basic-variable');
-                    select.innerHTML = '<option value="">Select a variable</option>';
+                    // Load jitter plot variable dropdown
+                    const jitterSelect = document.getElementById('basic-variable-jitter');
+                    jitterSelect.innerHTML = '<option value="">Select a variable</option>';
                     data.variables.forEach(variable => {
                         const option = document.createElement('option');
                         option.value = variable;
                         option.textContent = variable;
-                        select.appendChild(option);
+                        jitterSelect.appendChild(option);
+                    });
+                    
+                    // Load line plot variable dropdown
+                    const lineSelect = document.getElementById('basic-variable-line');
+                    lineSelect.innerHTML = '<option value="">Select a variable</option>';
+                    data.variables.forEach(variable => {
+                        const option = document.createElement('option');
+                        option.value = variable;
+                        option.textContent = variable;
+                        lineSelect.appendChild(option);
                     });
                 })
                 .catch(error => {
@@ -1158,36 +1011,24 @@
                 });
         }
         
-        function updateBasicPlotButtons() {
+        function updateJitterPlotButton() {
             const jitterBtn = document.getElementById('generateJitterBtn');
-            const lineBtn = document.getElementById('generateLineBtn');
             
-            if (basicVariable) {
+            if (basicVariableJitter) {
                 jitterBtn.disabled = false;
-                lineBtn.disabled = false;
             } else {
                 jitterBtn.disabled = true;
-                lineBtn.disabled = true;
             }
         }
         
-        function updateAggregationOptions() {
-            const jitterAgg = document.getElementById('jitter-aggregation');
-            const lineAgg = document.getElementById('line-aggregation');
+        function updateLinePlotButton() {
+            const lineBtn = document.getElementById('generateLineBtn');
             
-            // Enable higher-level aggregations based on selected filters
-            [jitterAgg, lineAgg].forEach(select => {
-                const options = select.querySelectorAll('option');
-                options.forEach(option => {
-                    if (option.value === 'phase') {
-                        option.disabled = !selectedPhase && !selectedSystem;
-                    } else if (option.value === 'system') {
-                        option.disabled = !selectedSystem;
-                    } else if (option.value === 'site') {
-                        option.disabled = !selectedSite;
-                    }
-                });
-            });
+            if (basicVariableLine) {
+                lineBtn.disabled = false;
+            } else {
+                lineBtn.disabled = true;
+            }
         }
         
         function generateJitterPlot() {
@@ -1197,27 +1038,23 @@
             
             // Build query parameters
             let params = new URLSearchParams({
-                variable: basicVariable,
+                variable: basicVariableJitter,
                 plot_type: 'jitter',
                 aggregation: aggregation
             });
-            
-            if (selectedSite) params.append('sites', selectedSite);
-            if (selectedSystem) params.append('system', selectedSystem);
-            if (selectedPhase) params.append('phase', selectedPhase);
 
             fetch(`/api/plot-data-json?${params}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.data && data.data.length > 0) {
-                        createJitterPlot(data.data, basicVariable, aggregation);
+                        createJitterPlot(data.data, basicVariableJitter, aggregation);
                     } else {
                         container.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">No data available for jitter plot.</div>';
                     }
                 })
                 .catch(error => {
-                    console.error('Error loading jitter plot data:', error);
-                    container.innerHTML = '<div style="text-align: center; padding: 40px; color: #d32f2f;">Error loading jitter plot data.</div>';
+                    console.error('Error generating jitter plot:', error);
+                    container.innerHTML = '<div style="text-align: center; padding: 40px; color: #e74c3c;">Error loading jitter plot data.</div>';
                 });
         }
         
@@ -1228,30 +1065,26 @@
             
             // Build query parameters
             let params = new URLSearchParams({
-                variable: basicVariable,
+                variable: basicVariableLine,
                 plot_type: 'line',
                 aggregation: aggregation
             });
-            
-            if (selectedSite) params.append('sites', selectedSite);
-            if (selectedSystem) params.append('system', selectedSystem);
-            if (selectedPhase) params.append('phase', selectedPhase);
 
             fetch(`/api/plot-data-json?${params}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.data && data.data.length > 0) {
-                        createLinePlot(data.data, basicVariable, aggregation);
+                        createLinePlot(data.data, basicVariableLine, aggregation);
                     } else {
                         container.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">No data available for line plot.</div>';
                     }
                 })
                 .catch(error => {
-                    console.error('Error loading line plot data:', error);
-                    container.innerHTML = '<div style="text-align: center; padding: 40px; color: #d32f2f;">Error loading line plot data.</div>';
+                    console.error('Error generating line plot:', error);
+                    container.innerHTML = '<div style="text-align: center; padding: 40px; color: #e74c3c;">Error loading line plot data.</div>';
                 });
         }
-        
+
         function createJitterPlot(data, variable, aggregation) {
             const container = document.getElementById('jitterPlotContainer');
             container.innerHTML = '';
