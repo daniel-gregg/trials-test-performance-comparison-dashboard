@@ -503,9 +503,9 @@
                                 <label for="jitter-aggregation">Aggregation:</label>
                                 <select id="jitter-aggregation" class="form-control">
                                     <option value="plot">By Plot</option>
-                                    <option value="phase" disabled>By Phase</option>
-                                    <option value="system" disabled>By System</option>
-                                    <option value="site" disabled>By Site</option>
+                                    <option value="phase">By Phase</option>
+                                    <option value="system">By System</option>
+                                    <option value="site">By Site</option>
                                 </select>
                             </div>
                             
@@ -1176,41 +1176,80 @@
             const container = document.getElementById('jitterPlotContainer');
             container.innerHTML = '';
             
-            // Simple jitter plot implementation
-            const svgWidth = 600;
-            const svgHeight = 300;
-            const margin = { top: 60, right: 40, bottom: 80, left: 60 };
+            // Group data by the specified aggregation level
+            const groupedData = {};
+            let groupKey;
+            
+            data.forEach(d => {
+                switch (aggregation) {
+                    case 'system':
+                        groupKey = d.system || 'Unknown';
+                        break;
+                    case 'phase':
+                        groupKey = d.phase || 'Unknown';
+                        break;
+                    case 'site':
+                        groupKey = d.site || 'Unknown';
+                        break;
+                    default: // 'plot'
+                        groupKey = d.plot || 'Unknown';
+                        break;
+                }
+                
+                if (!groupedData[groupKey]) {
+                    groupedData[groupKey] = [];
+                }
+                groupedData[groupKey].push(parseFloat(d.value));
+            });
+            
+            // Filter out NaN values and sort categories
+            Object.keys(groupedData).forEach(key => {
+                groupedData[key] = groupedData[key].filter(v => !isNaN(v));
+            });
+            
+            const categories = Object.keys(groupedData).sort();
+            if (categories.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">No valid data for jitter plot.</div>';
+                return;
+            }
+            
+            // Set up SVG dimensions
+            const svgWidth = 800;
+            const svgHeight = 500;
+            const margin = { top: 80, right: 50, bottom: 100, left: 80 };
             const plotWidth = svgWidth - margin.left - margin.right;
             const plotHeight = svgHeight - margin.top - margin.bottom;
-
+            
             const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
             svg.setAttribute('width', svgWidth);
             svg.setAttribute('height', svgHeight);
             svg.style.border = '1px solid #ddd';
             svg.style.borderRadius = '4px';
-
-            // Get value range
-            const allValues = data.map(d => parseFloat(d.value)).filter(v => !isNaN(v));
+            
+            // Calculate value range for y-axis
+            const allValues = Object.values(groupedData).flat();
             const minY = Math.min(...allValues);
             const maxY = Math.max(...allValues);
             const yPadding = (maxY - minY) * 0.1;
             const yMin = minY - yPadding;
             const yMax = maxY + yPadding;
-
+            
             // Create scales
-            const yScale = (value) => plotHeight - ((value - yMin) / (yMax - yMin)) * plotHeight + margin.top;
-
+            const yScale = (value) => margin.top + (1 - (value - yMin) / (yMax - yMin)) * plotHeight;
+            const xScale = (categoryIndex) => margin.left + (categoryIndex + 0.5) * (plotWidth / categories.length);
+            const categoryWidth = plotWidth / categories.length;
+            const jitterWidth = Math.min(categoryWidth * 0.6, 60);
+            
             // Draw axes
-            const xAxisY = yScale(yMin);
             const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
             xAxis.setAttribute('x1', margin.left);
-            xAxis.setAttribute('y1', xAxisY);
+            xAxis.setAttribute('y1', margin.top + plotHeight);
             xAxis.setAttribute('x2', margin.left + plotWidth);
-            xAxis.setAttribute('y2', xAxisY);
+            xAxis.setAttribute('y2', margin.top + plotHeight);
             xAxis.setAttribute('stroke', '#333');
             xAxis.setAttribute('stroke-width', '2');
             svg.appendChild(xAxis);
-
+            
             const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
             yAxis.setAttribute('x1', margin.left);
             yAxis.setAttribute('y1', margin.top);
@@ -1219,34 +1258,106 @@
             yAxis.setAttribute('stroke', '#333');
             yAxis.setAttribute('stroke-width', '2');
             svg.appendChild(yAxis);
-
-            // Plot points with jitter
-            data.forEach((d, index) => {
-                const x = margin.left + (index / (data.length - 1)) * plotWidth + (Math.random() - 0.5) * 20; // Add jitter
-                const y = yScale(d.value);
-
-                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                circle.setAttribute('cx', x);
-                circle.setAttribute('cy', y);
-                circle.setAttribute('r', '4');
-                circle.setAttribute('fill', '#4CAF50');
-                circle.setAttribute('stroke', '#333');
-                circle.setAttribute('stroke-width', '1');
-                circle.setAttribute('opacity', '0.7');
-                svg.appendChild(circle);
+            
+            // Add Y-axis ticks and labels
+            const yTicks = 5;
+            for (let i = 0; i <= yTicks; i++) {
+                const value = yMin + (yMax - yMin) * (i / yTicks);
+                const y = yScale(value);
+                
+                // Tick mark
+                const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                tick.setAttribute('x1', margin.left - 5);
+                tick.setAttribute('y1', y);
+                tick.setAttribute('x2', margin.left);
+                tick.setAttribute('y2', y);
+                tick.setAttribute('stroke', '#333');
+                tick.setAttribute('stroke-width', '1');
+                svg.appendChild(tick);
+                
+                // Label
+                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label.setAttribute('x', margin.left - 10);
+                label.setAttribute('y', y);
+                label.setAttribute('text-anchor', 'end');
+                label.setAttribute('alignment-baseline', 'middle');
+                label.setAttribute('font-family', 'Arial, sans-serif');
+                label.setAttribute('font-size', '12');
+                label.setAttribute('fill', '#333');
+                label.textContent = value.toFixed(1);
+                svg.appendChild(label);
+            }
+            
+            // Plot points for each category with jitter
+            const colors = ['#4CAF50', '#2196F3', '#FF9800', '#F44336', '#9C27B0', '#00BCD4', '#795548', '#607D8B'];
+            
+            categories.forEach((category, categoryIndex) => {
+                const values = groupedData[category];
+                const centerX = xScale(categoryIndex);
+                const color = colors[categoryIndex % colors.length];
+                
+                values.forEach(value => {
+                    const jitterX = centerX + (Math.random() - 0.5) * jitterWidth;
+                    const y = yScale(value);
+                    
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', jitterX);
+                    circle.setAttribute('cy', y);
+                    circle.setAttribute('r', '4');
+                    circle.setAttribute('fill', color);
+                    circle.setAttribute('stroke', '#333');
+                    circle.setAttribute('stroke-width', '1');
+                    circle.setAttribute('opacity', '0.7');
+                    svg.appendChild(circle);
+                });
+                
+                // Add category label
+                const categoryLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                categoryLabel.setAttribute('x', centerX);
+                categoryLabel.setAttribute('y', margin.top + plotHeight + 25);
+                categoryLabel.setAttribute('text-anchor', 'middle');
+                categoryLabel.setAttribute('font-family', 'Arial, sans-serif');
+                categoryLabel.setAttribute('font-size', '12');
+                categoryLabel.setAttribute('fill', '#333');
+                categoryLabel.textContent = category;
+                svg.appendChild(categoryLabel);
             });
-
+            
             // Add title
             const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
             title.setAttribute('x', svgWidth / 2);
-            title.setAttribute('y', 25);
+            title.setAttribute('y', 30);
             title.setAttribute('text-anchor', 'middle');
             title.setAttribute('font-family', 'Arial, sans-serif');
-            title.setAttribute('font-size', '14');
+            title.setAttribute('font-size', '16');
             title.setAttribute('font-weight', 'bold');
-            title.textContent = `${variable} Jitter Plot (${aggregation})`;
+            title.setAttribute('fill', '#333');
+            title.textContent = `${variable} by ${aggregation.charAt(0).toUpperCase() + aggregation.slice(1)}`;
             svg.appendChild(title);
-
+            
+            // Add Y-axis label
+            const yLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            yLabel.setAttribute('x', 20);
+            yLabel.setAttribute('y', svgHeight / 2);
+            yLabel.setAttribute('text-anchor', 'middle');
+            yLabel.setAttribute('font-family', 'Arial, sans-serif');
+            yLabel.setAttribute('font-size', '14');
+            yLabel.setAttribute('fill', '#333');
+            yLabel.setAttribute('transform', `rotate(-90, 20, ${svgHeight / 2})`);
+            yLabel.textContent = variable;
+            svg.appendChild(yLabel);
+            
+            // Add X-axis label
+            const xLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            xLabel.setAttribute('x', svgWidth / 2);
+            xLabel.setAttribute('y', svgHeight - 20);
+            xLabel.setAttribute('text-anchor', 'middle');
+            xLabel.setAttribute('font-family', 'Arial, sans-serif');
+            xLabel.setAttribute('font-size', '14');
+            xLabel.setAttribute('fill', '#333');
+            xLabel.textContent = aggregation.charAt(0).toUpperCase() + aggregation.slice(1);
+            svg.appendChild(xLabel);
+            
             container.appendChild(svg);
         }
         
