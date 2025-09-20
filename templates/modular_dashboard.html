@@ -503,9 +503,9 @@
                                 <label for="jitter-aggregation">Aggregation:</label>
                                 <select id="jitter-aggregation" class="form-control">
                                     <option value="plot">By Plot</option>
-                                    <option value="phase" disabled>By Phase</option>
-                                    <option value="system" disabled>By System</option>
-                                    <option value="site" disabled>By Site</option>
+                                    <option value="phase">By Phase</option>
+                                    <option value="system">By System</option>
+                                    <option value="site">By Site</option>
                                 </select>
                             </div>
                             
@@ -559,6 +559,66 @@
                     
                     <div id="plots-tab" class="tab-content active">
                         <h3>Performance Comparison Plot</h3>
+                        <p>Generate box plots to compare performance across different systems or phases.</p>
+                        
+                        <div class="options-content" style="margin-bottom: 20px;">
+                            <div class="selection-panel">
+                                <h4>Plot Configuration</h4>
+                                
+                                <div class="form-group">
+                                    <label for="gross-margin-variable">Variable for Comparison:</label>
+                                    <select id="gross-margin-variable" class="form-control">
+                                        <option value="">Select a variable</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="gross-margin-site">Site:</label>
+                                    <select id="gross-margin-site" class="form-control">
+                                        <option value="">Select a site</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Comparison Type:</label>
+                                    <div class="plot-type-toggle">
+                                        <label class="toggle-option">
+                                            <input type="radio" name="grossMarginType" value="systems" checked>
+                                            <span>Compare Systems</span>
+                                        </label>
+                                        <label class="toggle-option">
+                                            <input type="radio" name="grossMarginType" value="phases">
+                                            <span>Compare Phases</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div id="gross-margin-systems-group" class="form-group">
+                                    <label>Select Systems to Compare:</label>
+                                    <div id="grossMarginSystemsMultiSelect" class="multi-select">
+                                        <p>Select a site first</p>
+                                    </div>
+                                </div>
+                                
+                                <div id="gross-margin-phases-group" class="form-group" style="display: none;">
+                                    <label>Select Phases to Compare:</label>
+                                    <div id="grossMarginPhasesMultiSelect" class="multi-select">
+                                        <p>Select a site and system first</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="selection-panel">
+                                <h4>Current Selection</h4>
+                                <div id="gross-margin-summary">
+                                    <p><strong>Variable:</strong> <span id="selected-gm-variable">None</span></p>
+                                    <p><strong>Site:</strong> <span id="selected-gm-site">None</span></p>
+                                    <p><strong>Type:</strong> <span id="selected-gm-type">Systems</span></p>
+                                    <p><strong>Selected Items:</strong> <span id="selected-gm-items">None</span></p>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div class="plot-container" id="plotContainer">
                             <div style="text-align: center; padding: 40px; color: #666;">
                                 Configure options and click "Generate Plot" to view performance comparisons
@@ -635,6 +695,13 @@
         // Comparison variables
         let selectedComparisonSites = [];
         let comparisonVariable = '';
+        
+        // Gross margin comparison variables
+        let grossMarginVariable = '';
+        let grossMarginSite = '';
+        let grossMarginType = 'systems'; // 'systems' or 'phases'
+        let grossMarginSystems = [];
+        let grossMarginPhases = [];
 
         // Component navigation
         document.addEventListener('DOMContentLoaded', function() {
@@ -643,6 +710,8 @@
             loadComparisonSites();
             loadBasicVariables();
             loadComparisonVariables();
+            loadGrossMarginVariables();
+            loadGrossMarginSites();
             
             // Component navigation handlers
             document.querySelectorAll('.nav-item.available').forEach(item => {
@@ -709,6 +778,33 @@
             document.getElementById('generateComparisonBtn').addEventListener('click', function() {
                 if (comparisonVariable && selectedComparisonSites.length > 0) {
                     generateComparisonChart();
+                }
+            });
+            
+            // Gross margin comparison event handlers
+            document.getElementById('gross-margin-variable').addEventListener('change', function() {
+                grossMarginVariable = this.value;
+                updateGrossMarginButton();
+                updateGrossMarginSummary();
+            });
+            
+            document.getElementById('gross-margin-site').addEventListener('change', function() {
+                grossMarginSite = this.value;
+                loadGrossMarginSystems();
+                updateGrossMarginSummary();
+            });
+            
+            document.querySelectorAll('input[name="grossMarginType"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    grossMarginType = this.value;
+                    updateGrossMarginControls();
+                    updateGrossMarginSummary();
+                });
+            });
+            
+            document.getElementById('plotBtn').addEventListener('click', function() {
+                if (grossMarginVariable && grossMarginSite && validateGrossMarginSelection()) {
+                    generateGrossMarginPlot();
                 }
             });
         });
@@ -890,6 +986,41 @@
                     const container = document.getElementById('refSystemMultiSelect');
                     container.innerHTML = '';
                     
+                    // Add "All systems" checkbox
+                    const allLabel = document.createElement('label');
+                    allLabel.style.fontWeight = 'bold';
+                    allLabel.style.borderBottom = '1px solid #ddd';
+                    allLabel.style.paddingBottom = '5px';
+                    allLabel.style.marginBottom = '10px';
+                    const allCheckbox = document.createElement('input');
+                    allCheckbox.type = 'checkbox';
+                    allCheckbox.value = 'all_systems';
+                    allCheckbox.addEventListener('change', function() {
+                        const systemCheckboxes = container.querySelectorAll('input[type="checkbox"]:not([value="all_systems"])');
+                        if (this.checked) {
+                            // Select all systems
+                            selectedRefSystems = [];
+                            systemCheckboxes.forEach(cb => {
+                                cb.checked = true;
+                                selectedRefSystems.push(cb.value);
+                            });
+                        } else {
+                            // Deselect all systems
+                            selectedRefSystems = [];
+                            systemCheckboxes.forEach(cb => {
+                                cb.checked = false;
+                            });
+                        }
+                        updateReferenceSummary();
+                        if (refPlotType === 'phases' && selectedRefSystems.length === 1) {
+                            loadRefPhases();
+                        }
+                    });
+                    
+                    allLabel.appendChild(allCheckbox);
+                    allLabel.appendChild(document.createTextNode(' All systems'));
+                    container.appendChild(allLabel);
+                    
                     data.systems.forEach(system => {
                         const label = document.createElement('label');
                         const checkbox = document.createElement('input');
@@ -900,7 +1031,17 @@
                                 selectedRefSystems.push(system);
                             } else {
                                 selectedRefSystems = selectedRefSystems.filter(s => s !== system);
+                                // Uncheck "All systems" if any individual system is unchecked
+                                allCheckbox.checked = false;
                             }
+                            
+                            // Check "All systems" if all individual systems are selected
+                            const systemCheckboxes = container.querySelectorAll('input[type="checkbox"]:not([value="all_systems"])');
+                            const checkedSystemCheckboxes = container.querySelectorAll('input[type="checkbox"]:not([value="all_systems"]):checked');
+                            if (systemCheckboxes.length === checkedSystemCheckboxes.length && systemCheckboxes.length > 0) {
+                                allCheckbox.checked = true;
+                            }
+                            
                             updateReferenceSummary();
                             if (refPlotType === 'phases' && selectedRefSystems.length === 1) {
                                 loadRefPhases();
@@ -930,6 +1071,38 @@
                     const container = document.getElementById('refPhaseMultiSelect');
                     container.innerHTML = '';
                     
+                    // Add "All phases" checkbox
+                    const allLabel = document.createElement('label');
+                    allLabel.style.fontWeight = 'bold';
+                    allLabel.style.borderBottom = '1px solid #ddd';
+                    allLabel.style.paddingBottom = '5px';
+                    allLabel.style.marginBottom = '10px';
+                    const allCheckbox = document.createElement('input');
+                    allCheckbox.type = 'checkbox';
+                    allCheckbox.value = 'all_phases';
+                    allCheckbox.addEventListener('change', function() {
+                        const phaseCheckboxes = container.querySelectorAll('input[type="checkbox"]:not([value="all_phases"])');
+                        if (this.checked) {
+                            // Select all phases
+                            selectedRefPhases = [];
+                            phaseCheckboxes.forEach(cb => {
+                                cb.checked = true;
+                                selectedRefPhases.push(cb.value);
+                            });
+                        } else {
+                            // Deselect all phases
+                            selectedRefPhases = [];
+                            phaseCheckboxes.forEach(cb => {
+                                cb.checked = false;
+                            });
+                        }
+                        updateReferenceSummary();
+                    });
+                    
+                    allLabel.appendChild(allCheckbox);
+                    allLabel.appendChild(document.createTextNode(' All phases'));
+                    container.appendChild(allLabel);
+                    
                     data.phases.forEach(phase => {
                         const label = document.createElement('label');
                         const checkbox = document.createElement('input');
@@ -940,7 +1113,17 @@
                                 selectedRefPhases.push(phase);
                             } else {
                                 selectedRefPhases = selectedRefPhases.filter(p => p !== phase);
+                                // Uncheck "All phases" if any individual phase is unchecked
+                                allCheckbox.checked = false;
                             }
+                            
+                            // Check "All phases" if all individual phases are selected
+                            const phaseCheckboxes = container.querySelectorAll('input[type="checkbox"]:not([value="all_phases"])');
+                            const checkedPhaseCheckboxes = container.querySelectorAll('input[type="checkbox"]:not([value="all_phases"]):checked');
+                            if (phaseCheckboxes.length === checkedPhaseCheckboxes.length && phaseCheckboxes.length > 0) {
+                                allCheckbox.checked = true;
+                            }
+                            
                             updateReferenceSummary();
                         });
                         
@@ -1089,41 +1272,80 @@
             const container = document.getElementById('jitterPlotContainer');
             container.innerHTML = '';
             
-            // Simple jitter plot implementation
-            const svgWidth = 600;
-            const svgHeight = 300;
-            const margin = { top: 60, right: 40, bottom: 80, left: 60 };
+            // Group data by the specified aggregation level
+            const groupedData = {};
+            let groupKey;
+            
+            data.forEach(d => {
+                switch (aggregation) {
+                    case 'system':
+                        groupKey = d.system || 'Unknown';
+                        break;
+                    case 'phase':
+                        groupKey = d.phase || 'Unknown';
+                        break;
+                    case 'site':
+                        groupKey = d.site || 'Unknown';
+                        break;
+                    default: // 'plot'
+                        groupKey = d.plot || 'Unknown';
+                        break;
+                }
+                
+                if (!groupedData[groupKey]) {
+                    groupedData[groupKey] = [];
+                }
+                groupedData[groupKey].push(parseFloat(d.value));
+            });
+            
+            // Filter out NaN values and sort categories
+            Object.keys(groupedData).forEach(key => {
+                groupedData[key] = groupedData[key].filter(v => !isNaN(v));
+            });
+            
+            const categories = Object.keys(groupedData).sort();
+            if (categories.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">No valid data for jitter plot.</div>';
+                return;
+            }
+            
+            // Set up SVG dimensions
+            const svgWidth = 800;
+            const svgHeight = 500;
+            const margin = { top: 80, right: 50, bottom: 100, left: 80 };
             const plotWidth = svgWidth - margin.left - margin.right;
             const plotHeight = svgHeight - margin.top - margin.bottom;
-
+            
             const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
             svg.setAttribute('width', svgWidth);
             svg.setAttribute('height', svgHeight);
             svg.style.border = '1px solid #ddd';
             svg.style.borderRadius = '4px';
-
-            // Get value range
-            const allValues = data.map(d => parseFloat(d.value)).filter(v => !isNaN(v));
+            
+            // Calculate value range for y-axis
+            const allValues = Object.values(groupedData).flat();
             const minY = Math.min(...allValues);
             const maxY = Math.max(...allValues);
             const yPadding = (maxY - minY) * 0.1;
             const yMin = minY - yPadding;
             const yMax = maxY + yPadding;
-
+            
             // Create scales
-            const yScale = (value) => plotHeight - ((value - yMin) / (yMax - yMin)) * plotHeight + margin.top;
-
+            const yScale = (value) => margin.top + (1 - (value - yMin) / (yMax - yMin)) * plotHeight;
+            const xScale = (categoryIndex) => margin.left + (categoryIndex + 0.5) * (plotWidth / categories.length);
+            const categoryWidth = plotWidth / categories.length;
+            const jitterWidth = Math.min(categoryWidth * 0.6, 60);
+            
             // Draw axes
-            const xAxisY = yScale(yMin);
             const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
             xAxis.setAttribute('x1', margin.left);
-            xAxis.setAttribute('y1', xAxisY);
+            xAxis.setAttribute('y1', margin.top + plotHeight);
             xAxis.setAttribute('x2', margin.left + plotWidth);
-            xAxis.setAttribute('y2', xAxisY);
+            xAxis.setAttribute('y2', margin.top + plotHeight);
             xAxis.setAttribute('stroke', '#333');
             xAxis.setAttribute('stroke-width', '2');
             svg.appendChild(xAxis);
-
+            
             const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
             yAxis.setAttribute('x1', margin.left);
             yAxis.setAttribute('y1', margin.top);
@@ -1132,34 +1354,106 @@
             yAxis.setAttribute('stroke', '#333');
             yAxis.setAttribute('stroke-width', '2');
             svg.appendChild(yAxis);
-
-            // Plot points with jitter
-            data.forEach((d, index) => {
-                const x = margin.left + (index / (data.length - 1)) * plotWidth + (Math.random() - 0.5) * 20; // Add jitter
-                const y = yScale(d.value);
-
-                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                circle.setAttribute('cx', x);
-                circle.setAttribute('cy', y);
-                circle.setAttribute('r', '4');
-                circle.setAttribute('fill', '#4CAF50');
-                circle.setAttribute('stroke', '#333');
-                circle.setAttribute('stroke-width', '1');
-                circle.setAttribute('opacity', '0.7');
-                svg.appendChild(circle);
+            
+            // Add Y-axis ticks and labels
+            const yTicks = 5;
+            for (let i = 0; i <= yTicks; i++) {
+                const value = yMin + (yMax - yMin) * (i / yTicks);
+                const y = yScale(value);
+                
+                // Tick mark
+                const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                tick.setAttribute('x1', margin.left - 5);
+                tick.setAttribute('y1', y);
+                tick.setAttribute('x2', margin.left);
+                tick.setAttribute('y2', y);
+                tick.setAttribute('stroke', '#333');
+                tick.setAttribute('stroke-width', '1');
+                svg.appendChild(tick);
+                
+                // Label
+                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label.setAttribute('x', margin.left - 10);
+                label.setAttribute('y', y);
+                label.setAttribute('text-anchor', 'end');
+                label.setAttribute('alignment-baseline', 'middle');
+                label.setAttribute('font-family', 'Arial, sans-serif');
+                label.setAttribute('font-size', '12');
+                label.setAttribute('fill', '#333');
+                label.textContent = value.toFixed(1);
+                svg.appendChild(label);
+            }
+            
+            // Plot points for each category with jitter
+            const colors = ['#4CAF50', '#2196F3', '#FF9800', '#F44336', '#9C27B0', '#00BCD4', '#795548', '#607D8B'];
+            
+            categories.forEach((category, categoryIndex) => {
+                const values = groupedData[category];
+                const centerX = xScale(categoryIndex);
+                const color = colors[categoryIndex % colors.length];
+                
+                values.forEach(value => {
+                    const jitterX = centerX + (Math.random() - 0.5) * jitterWidth;
+                    const y = yScale(value);
+                    
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', jitterX);
+                    circle.setAttribute('cy', y);
+                    circle.setAttribute('r', '4');
+                    circle.setAttribute('fill', color);
+                    circle.setAttribute('stroke', '#333');
+                    circle.setAttribute('stroke-width', '1');
+                    circle.setAttribute('opacity', '0.7');
+                    svg.appendChild(circle);
+                });
+                
+                // Add category label
+                const categoryLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                categoryLabel.setAttribute('x', centerX);
+                categoryLabel.setAttribute('y', margin.top + plotHeight + 25);
+                categoryLabel.setAttribute('text-anchor', 'middle');
+                categoryLabel.setAttribute('font-family', 'Arial, sans-serif');
+                categoryLabel.setAttribute('font-size', '12');
+                categoryLabel.setAttribute('fill', '#333');
+                categoryLabel.textContent = category;
+                svg.appendChild(categoryLabel);
             });
-
+            
             // Add title
             const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
             title.setAttribute('x', svgWidth / 2);
-            title.setAttribute('y', 25);
+            title.setAttribute('y', 30);
             title.setAttribute('text-anchor', 'middle');
             title.setAttribute('font-family', 'Arial, sans-serif');
-            title.setAttribute('font-size', '14');
+            title.setAttribute('font-size', '16');
             title.setAttribute('font-weight', 'bold');
-            title.textContent = `${variable} Jitter Plot (${aggregation})`;
+            title.setAttribute('fill', '#333');
+            title.textContent = `${variable} by ${aggregation.charAt(0).toUpperCase() + aggregation.slice(1)}`;
             svg.appendChild(title);
-
+            
+            // Add Y-axis label
+            const yLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            yLabel.setAttribute('x', 20);
+            yLabel.setAttribute('y', svgHeight / 2);
+            yLabel.setAttribute('text-anchor', 'middle');
+            yLabel.setAttribute('font-family', 'Arial, sans-serif');
+            yLabel.setAttribute('font-size', '14');
+            yLabel.setAttribute('fill', '#333');
+            yLabel.setAttribute('transform', `rotate(-90, 20, ${svgHeight / 2})`);
+            yLabel.textContent = variable;
+            svg.appendChild(yLabel);
+            
+            // Add X-axis label
+            const xLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            xLabel.setAttribute('x', svgWidth / 2);
+            xLabel.setAttribute('y', svgHeight - 20);
+            xLabel.setAttribute('text-anchor', 'middle');
+            xLabel.setAttribute('font-family', 'Arial, sans-serif');
+            xLabel.setAttribute('font-size', '14');
+            xLabel.setAttribute('fill', '#333');
+            xLabel.textContent = aggregation.charAt(0).toUpperCase() + aggregation.slice(1);
+            svg.appendChild(xLabel);
+            
             container.appendChild(svg);
         }
         
@@ -1376,6 +1670,560 @@
                     </div>
                 </div>
             `;
+        }
+        
+        // Gross Margin Comparison Functions
+        function loadGrossMarginVariables() {
+            fetch('/api/variables-json')
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('gross-margin-variable');
+                    select.innerHTML = '<option value="">Select a variable</option>';
+                    data.variables.forEach(variable => {
+                        const option = document.createElement('option');
+                        option.value = variable;
+                        option.textContent = variable;
+                        select.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading gross margin variables:', error);
+                });
+        }
+        
+        function loadGrossMarginSites() {
+            fetch('/api/sites-json')
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('gross-margin-site');
+                    select.innerHTML = '<option value="">Select a site</option>';
+                    data.sites.forEach(site => {
+                        const option = document.createElement('option');
+                        option.value = site;
+                        option.textContent = site;
+                        select.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading gross margin sites:', error);
+                });
+        }
+        
+        function loadGrossMarginSystems() {
+            if (!grossMarginSite) {
+                document.getElementById('grossMarginSystemsMultiSelect').innerHTML = '<p>Select a site first</p>';
+                return;
+            }
+
+            fetch(`/api/systems-json?site=${encodeURIComponent(grossMarginSite)}`)
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('grossMarginSystemsMultiSelect');
+                    container.innerHTML = '';
+                    
+                    // Add "All systems" checkbox similar to reference plots
+                    const allLabel = document.createElement('label');
+                    allLabel.style.fontWeight = 'bold';
+                    allLabel.style.borderBottom = '1px solid #ddd';
+                    allLabel.style.paddingBottom = '5px';
+                    allLabel.style.marginBottom = '10px';
+                    const allCheckbox = document.createElement('input');
+                    allCheckbox.type = 'checkbox';
+                    allCheckbox.value = 'all_systems';
+                    allCheckbox.addEventListener('change', function() {
+                        const systemCheckboxes = container.querySelectorAll('input[type="checkbox"]:not([value="all_systems"])');
+                        if (this.checked) {
+                            grossMarginSystems = [];
+                            systemCheckboxes.forEach(cb => {
+                                cb.checked = true;
+                                grossMarginSystems.push(cb.value);
+                            });
+                        } else {
+                            grossMarginSystems = [];
+                            systemCheckboxes.forEach(cb => {
+                                cb.checked = false;
+                            });
+                        }
+                        updateGrossMarginButton();
+                        updateGrossMarginSummary();
+                        if (grossMarginType === 'phases' && grossMarginSystems.length === 1) {
+                            loadGrossMarginPhases();
+                        }
+                    });
+                    
+                    allLabel.appendChild(allCheckbox);
+                    allLabel.appendChild(document.createTextNode(' All systems'));
+                    container.appendChild(allLabel);
+                    
+                    data.systems.forEach(system => {
+                        const label = document.createElement('label');
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.value = system;
+                        checkbox.addEventListener('change', function() {
+                            if (this.checked) {
+                                grossMarginSystems.push(system);
+                            } else {
+                                grossMarginSystems = grossMarginSystems.filter(s => s !== system);
+                                allCheckbox.checked = false;
+                            }
+                            
+                            // Check "All systems" if all individual systems are selected
+                            const systemCheckboxes = container.querySelectorAll('input[type="checkbox"]:not([value="all_systems"])');
+                            const checkedSystemCheckboxes = container.querySelectorAll('input[type="checkbox"]:not([value="all_systems"]):checked');
+                            if (systemCheckboxes.length === checkedSystemCheckboxes.length && systemCheckboxes.length > 0) {
+                                allCheckbox.checked = true;
+                            }
+                            
+                            updateGrossMarginButton();
+                            updateGrossMarginSummary();
+                            if (grossMarginType === 'phases' && grossMarginSystems.length === 1) {
+                                loadGrossMarginPhases();
+                            }
+                        });
+                        
+                        label.appendChild(checkbox);
+                        label.appendChild(document.createTextNode(system));
+                        container.appendChild(label);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading gross margin systems:', error);
+                });
+        }
+        
+        function loadGrossMarginPhases() {
+            if (!grossMarginSite || grossMarginSystems.length !== 1) {
+                document.getElementById('grossMarginPhasesMultiSelect').innerHTML = '<p>Select a site and one system first</p>';
+                return;
+            }
+
+            const system = grossMarginSystems[0];
+            fetch(`/api/phases-json?site=${encodeURIComponent(grossMarginSite)}&system=${encodeURIComponent(system)}`)
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('grossMarginPhasesMultiSelect');
+                    container.innerHTML = '';
+                    
+                    // Add "All phases" checkbox
+                    const allLabel = document.createElement('label');
+                    allLabel.style.fontWeight = 'bold';
+                    allLabel.style.borderBottom = '1px solid #ddd';
+                    allLabel.style.paddingBottom = '5px';
+                    allLabel.style.marginBottom = '10px';
+                    const allCheckbox = document.createElement('input');
+                    allCheckbox.type = 'checkbox';
+                    allCheckbox.value = 'all_phases';
+                    allCheckbox.addEventListener('change', function() {
+                        const phaseCheckboxes = container.querySelectorAll('input[type="checkbox"]:not([value="all_phases"])');
+                        if (this.checked) {
+                            grossMarginPhases = [];
+                            phaseCheckboxes.forEach(cb => {
+                                cb.checked = true;
+                                grossMarginPhases.push(cb.value);
+                            });
+                        } else {
+                            grossMarginPhases = [];
+                            phaseCheckboxes.forEach(cb => {
+                                cb.checked = false;
+                            });
+                        }
+                        updateGrossMarginButton();
+                        updateGrossMarginSummary();
+                    });
+                    
+                    allLabel.appendChild(allCheckbox);
+                    allLabel.appendChild(document.createTextNode(' All phases'));
+                    container.appendChild(allLabel);
+                    
+                    data.phases.forEach(phase => {
+                        const label = document.createElement('label');
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.value = phase;
+                        checkbox.addEventListener('change', function() {
+                            if (this.checked) {
+                                grossMarginPhases.push(phase);
+                            } else {
+                                grossMarginPhases = grossMarginPhases.filter(p => p !== phase);
+                                allCheckbox.checked = false;
+                            }
+                            
+                            // Check "All phases" if all individual phases are selected
+                            const phaseCheckboxes = container.querySelectorAll('input[type="checkbox"]:not([value="all_phases"])');
+                            const checkedPhaseCheckboxes = container.querySelectorAll('input[type="checkbox"]:not([value="all_phases"]):checked');
+                            if (phaseCheckboxes.length === checkedPhaseCheckboxes.length && phaseCheckboxes.length > 0) {
+                                allCheckbox.checked = true;
+                            }
+                            
+                            updateGrossMarginButton();
+                            updateGrossMarginSummary();
+                        });
+                        
+                        label.appendChild(checkbox);
+                        label.appendChild(document.createTextNode(phase));
+                        container.appendChild(label);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading gross margin phases:', error);
+                });
+        }
+        
+        function updateGrossMarginControls() {
+            const systemsGroup = document.getElementById('gross-margin-systems-group');
+            const phasesGroup = document.getElementById('gross-margin-phases-group');
+            
+            if (grossMarginType === 'systems') {
+                systemsGroup.style.display = 'block';
+                phasesGroup.style.display = 'none';
+            } else {
+                systemsGroup.style.display = 'block';
+                phasesGroup.style.display = 'block';
+            }
+        }
+        
+        function updateGrossMarginButton() {
+            const btn = document.getElementById('plotBtn');
+            if (validateGrossMarginSelection()) {
+                btn.disabled = false;
+            } else {
+                btn.disabled = true;
+            }
+        }
+        
+        function validateGrossMarginSelection() {
+            if (!grossMarginVariable || !grossMarginSite) return false;
+            
+            if (grossMarginType === 'systems') {
+                return grossMarginSystems.length >= 2;
+            } else { // phases
+                return grossMarginSystems.length === 1 && grossMarginPhases.length >= 2;
+            }
+        }
+        
+        function updateGrossMarginSummary() {
+            document.getElementById('selected-gm-variable').textContent = grossMarginVariable || 'None';
+            document.getElementById('selected-gm-site').textContent = grossMarginSite || 'None';
+            document.getElementById('selected-gm-type').textContent = grossMarginType.charAt(0).toUpperCase() + grossMarginType.slice(1);
+            
+            let items = 'None';
+            if (grossMarginType === 'systems' && grossMarginSystems.length > 0) {
+                items = grossMarginSystems.join(', ');
+            } else if (grossMarginType === 'phases' && grossMarginPhases.length > 0) {
+                items = grossMarginPhases.join(', ');
+            }
+            document.getElementById('selected-gm-items').textContent = items;
+        }
+        
+        function generateGrossMarginPlot() {
+            const container = document.getElementById('plotContainer');
+            container.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;">Loading box plot...</div>';
+            
+            // Build query parameters
+            let params = new URLSearchParams({
+                variable: grossMarginVariable,
+                sites: grossMarginSite
+            });
+
+            fetch(`/api/plot-data-json?${params}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.data && data.data.length > 0) {
+                        const filteredData = filterGrossMarginData(data.data);
+                        if (filteredData.length > 0) {
+                            createGrossMarginBoxPlot(filteredData);
+                        } else {
+                            container.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">No data found for the selected comparison.</div>';
+                        }
+                    } else {
+                        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">No data available for the selected criteria.</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading gross margin plot data:', error);
+                    container.innerHTML = '<div style="text-align: center; padding: 40px; color: #d32f2f;">Error loading plot data. Please try again.</div>';
+                });
+        }
+        
+        function filterGrossMarginData(data) {
+            let filtered = data;
+            
+            if (grossMarginType === 'systems') {
+                // Comparing systems
+                filtered = data.filter(point => grossMarginSystems.includes(point.system));
+            } else { // phases
+                // Comparing phases within one system
+                filtered = data.filter(point => 
+                    point.system === grossMarginSystems[0] && grossMarginPhases.includes(point.phase)
+                );
+            }
+            
+            return filtered;
+        }
+        
+        function createGrossMarginBoxPlot(data) {
+            // Determine grouping variable
+            let groupBy, plotTitle;
+            if (grossMarginType === 'systems') {
+                groupBy = 'system';
+                plotTitle = `${grossMarginVariable} Comparison by System`;
+            } else {
+                groupBy = 'phase';
+                plotTitle = `${grossMarginVariable} Comparison by Phase`;
+            }
+
+            // Group data
+            const groupedData = {};
+            data.forEach(point => {
+                const groupKey = point[groupBy];
+                if (!groupedData[groupKey]) {
+                    groupedData[groupKey] = [];
+                }
+                groupedData[groupKey].push(point.value);
+            });
+
+            const groupNames = Object.keys(groupedData);
+            const plotContainer = document.getElementById('plotContainer');
+
+            // Clear the container
+            plotContainer.innerHTML = '';
+
+            // Create SVG
+            const svgWidth = 800;
+            const svgHeight = 500;
+            const margin = { top: 80, right: 50, bottom: 100, left: 80 };
+            const plotWidth = svgWidth - margin.left - margin.right;
+            const plotHeight = svgHeight - margin.top - margin.bottom;
+
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('width', svgWidth);
+            svg.setAttribute('height', svgHeight);
+            svg.style.border = '1px solid #ddd';
+            svg.style.borderRadius = '4px';
+
+            // Get value range for y-axis
+            const allValues = data.map(d => d.value).filter(v => !isNaN(v));
+            const minY = Math.min(...allValues);
+            const maxY = Math.max(...allValues);
+            const yPadding = (maxY - minY) * 0.1;
+            const yMin = minY - yPadding;
+            const yMax = maxY + yPadding;
+
+            // Create scale function
+            const scaleY = (value) => margin.top + (1 - (value - yMin) / (yMax - yMin)) * plotHeight;
+
+            // Calculate box positions
+            const boxWidth = Math.min(plotWidth / groupNames.length * 0.6, 80);
+            const colors = ['#4CAF50', '#2196F3', '#FF9800', '#F44336', '#9C27B0', '#00BCD4'];
+
+            // Draw boxes for each group
+            groupNames.forEach((groupName, index) => {
+                const values = groupedData[groupName].filter(v => !isNaN(v));
+                const stats = calculateBoxPlotStats(values);
+                const x = margin.left + (index + 0.5) * (plotWidth / groupNames.length);
+                const color = colors[index % colors.length];
+
+                drawBoxPlot(svg, x, boxWidth, stats, color, scaleY);
+
+                // Add group label
+                const xLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                xLabel.setAttribute('x', x);
+                xLabel.setAttribute('y', margin.top + plotHeight + 25);
+                xLabel.setAttribute('text-anchor', 'middle');
+                xLabel.setAttribute('font-size', '12');
+                xLabel.setAttribute('fill', '#333');
+                xLabel.textContent = groupName;
+                svg.appendChild(xLabel);
+            });
+
+            // Add title
+            const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            title.setAttribute('x', svgWidth / 2);
+            title.setAttribute('y', 30);
+            title.setAttribute('text-anchor', 'middle');
+            title.setAttribute('font-size', '16');
+            title.setAttribute('font-weight', 'bold');
+            title.setAttribute('fill', '#333');
+            title.textContent = plotTitle;
+            svg.appendChild(title);
+
+            // Add subtitle
+            const subtitle = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            subtitle.setAttribute('x', svgWidth / 2);
+            subtitle.setAttribute('y', 50);
+            subtitle.setAttribute('text-anchor', 'middle');
+            subtitle.setAttribute('font-size', '12');
+            subtitle.setAttribute('fill', '#666');
+            subtitle.textContent = `Site: ${grossMarginSite}`;
+            svg.appendChild(subtitle);
+
+            // Add Y-axis
+            const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            yAxis.setAttribute('x1', margin.left);
+            yAxis.setAttribute('y1', margin.top);
+            yAxis.setAttribute('x2', margin.left);
+            yAxis.setAttribute('y2', margin.top + plotHeight);
+            yAxis.setAttribute('stroke', '#333');
+            yAxis.setAttribute('stroke-width', '1');
+            svg.appendChild(yAxis);
+
+            // Add X-axis
+            const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            xAxis.setAttribute('x1', margin.left);
+            xAxis.setAttribute('y1', margin.top + plotHeight);
+            xAxis.setAttribute('x2', margin.left + plotWidth);
+            xAxis.setAttribute('y2', margin.top + plotHeight);
+            xAxis.setAttribute('stroke', '#333');
+            xAxis.setAttribute('stroke-width', '1');
+            svg.appendChild(xAxis);
+
+            // Add Y-axis ticks and labels
+            const yTicks = 5;
+            for (let i = 0; i <= yTicks; i++) {
+                const value = yMin + (yMax - yMin) * (i / yTicks);
+                const y = scaleY(value);
+                
+                // Tick mark
+                const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                tick.setAttribute('x1', margin.left - 5);
+                tick.setAttribute('y1', y);
+                tick.setAttribute('x2', margin.left);
+                tick.setAttribute('y2', y);
+                tick.setAttribute('stroke', '#333');
+                tick.setAttribute('stroke-width', '1');
+                svg.appendChild(tick);
+                
+                // Label
+                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label.setAttribute('x', margin.left - 10);
+                label.setAttribute('y', y);
+                label.setAttribute('text-anchor', 'end');
+                label.setAttribute('alignment-baseline', 'middle');
+                label.setAttribute('font-size', '12');
+                label.setAttribute('fill', '#333');
+                label.textContent = value.toFixed(1);
+                svg.appendChild(label);
+            }
+
+            // Add Y-axis label
+            const yLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            yLabel.setAttribute('x', 20);
+            yLabel.setAttribute('y', svgHeight / 2);
+            yLabel.setAttribute('text-anchor', 'middle');
+            yLabel.setAttribute('font-size', '14');
+            yLabel.setAttribute('fill', '#333');
+            yLabel.setAttribute('transform', `rotate(-90, 20, ${svgHeight / 2})`);
+            yLabel.textContent = grossMarginVariable;
+            svg.appendChild(yLabel);
+
+            // Add X-axis label
+            const xLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            xLabel.setAttribute('x', svgWidth / 2);
+            xLabel.setAttribute('y', svgHeight - 20);
+            xLabel.setAttribute('text-anchor', 'middle');
+            xLabel.setAttribute('font-size', '14');
+            xLabel.setAttribute('fill', '#333');
+            xLabel.textContent = groupBy.charAt(0).toUpperCase() + groupBy.slice(1);
+            svg.appendChild(xLabel);
+
+            plotContainer.appendChild(svg);
+        }
+        
+        // Copy boxplot calculation and drawing functions from legacy dashboard
+        function calculateBoxPlotStats(values) {
+            if (values.length === 0) return null;
+
+            const sorted = [...values].sort((a, b) => a - b);
+            const n = sorted.length;
+            
+            const q1Index = Math.floor(n * 0.25);
+            const medianIndex = Math.floor(n * 0.5);
+            const q3Index = Math.floor(n * 0.75);
+            
+            const q1 = sorted[q1Index];
+            const median = n % 2 === 0 ? (sorted[medianIndex - 1] + sorted[medianIndex]) / 2 : sorted[medianIndex];
+            const q3 = sorted[q3Index];
+            
+            const iqr = q3 - q1;
+            const lowerWhisker = Math.max(sorted[0], q1 - 1.5 * iqr);
+            const upperWhisker = Math.min(sorted[n - 1], q3 + 1.5 * iqr);
+            
+            // Find outliers
+            const outliers = sorted.filter(v => v < lowerWhisker || v > upperWhisker);
+            
+            return {
+                min: sorted[0],
+                q1,
+                median,
+                q3,
+                max: sorted[n - 1],
+                lowerWhisker,
+                upperWhisker,
+                outliers
+            };
+        }
+
+        function drawBoxPlot(svg, centerX, boxWidth, stats, color, scaleY) {
+            if (!stats) return;
+
+            const halfWidth = boxWidth / 2;
+
+            // Draw whiskers
+            const whiskerLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            whiskerLine.setAttribute('x1', centerX);
+            whiskerLine.setAttribute('y1', scaleY(stats.lowerWhisker));
+            whiskerLine.setAttribute('x2', centerX);
+            whiskerLine.setAttribute('y2', scaleY(stats.upperWhisker));
+            whiskerLine.setAttribute('stroke', color);
+            whiskerLine.setAttribute('stroke-width', '1');
+            svg.appendChild(whiskerLine);
+
+            // Draw whisker caps
+            [stats.lowerWhisker, stats.upperWhisker].forEach(value => {
+                const cap = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                cap.setAttribute('x1', centerX - halfWidth * 0.5);
+                cap.setAttribute('y1', scaleY(value));
+                cap.setAttribute('x2', centerX + halfWidth * 0.5);
+                cap.setAttribute('y2', scaleY(value));
+                cap.setAttribute('stroke', color);
+                cap.setAttribute('stroke-width', '1');
+                svg.appendChild(cap);
+            });
+
+            // Draw box
+            const box = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            box.setAttribute('x', centerX - halfWidth);
+            box.setAttribute('y', scaleY(stats.q3));
+            box.setAttribute('width', boxWidth);
+            box.setAttribute('height', scaleY(stats.q1) - scaleY(stats.q3));
+            box.setAttribute('fill', color);
+            box.setAttribute('fill-opacity', '0.3');
+            box.setAttribute('stroke', color);
+            box.setAttribute('stroke-width', '2');
+            svg.appendChild(box);
+
+            // Draw median line
+            const medianLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            medianLine.setAttribute('x1', centerX - halfWidth);
+            medianLine.setAttribute('y1', scaleY(stats.median));
+            medianLine.setAttribute('x2', centerX + halfWidth);
+            medianLine.setAttribute('y2', scaleY(stats.median));
+            medianLine.setAttribute('stroke', color);
+            medianLine.setAttribute('stroke-width', '2');
+            svg.appendChild(medianLine);
+
+            // Draw outliers
+            stats.outliers.forEach(outlier => {
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', centerX);
+                circle.setAttribute('cy', scaleY(outlier));
+                circle.setAttribute('r', '3');
+                circle.setAttribute('fill', color);
+                circle.setAttribute('stroke', '#333');
+                circle.setAttribute('stroke-width', '1');
+                svg.appendChild(circle);
+            });
         }
     </script>
 </body>
